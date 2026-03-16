@@ -1,16 +1,16 @@
 import axios from "axios";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 
-// Replace with your actual API URL
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3333";
+export const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3333";
 
-interface Worker {
+export interface Worker {
   id: string;
   name: string;
   cpf: string;
   company: string;
+  companyId?: string;
 }
 
 interface AuthContextData {
@@ -31,6 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [worker, setWorker] = useState<Worker | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const signOutRef = useRef<() => Promise<void>>(async () => {});
 
   useEffect(() => {
     async function loadStorageData() {
@@ -45,6 +46,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     loadStorageData();
+  }, []);
+
+  useEffect(() => {
+    signOutRef.current = signOut;
+  });
+
+  useEffect(() => {
+    const interceptorId = axios.interceptors.response.use(
+      (res) => res,
+      (error) => {
+        if (error.response?.status === 401) {
+          signOutRef.current();
+        }
+        return Promise.reject(error);
+      }
+    );
+    return () => {
+      axios.interceptors.response.eject(interceptorId);
+    };
   }, []);
 
   async function signIn(cpf: string, password: string) {

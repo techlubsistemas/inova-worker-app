@@ -2,7 +2,7 @@ import { AiBanner } from "@/components/aiBanner";
 import { UserHeader } from "@/components/headers/userHeader";
 import { InovaUniversity } from "@/components/inovaUniversity";
 import { LessonModal } from "@/components/modals/lessonModal";
-import { RoutesView } from "@/components/routesView";
+import { WorkOrdersView } from "@/components/workOrdersView";
 import { useModal } from "@/context/modalContext";
 import { ScrollView, View } from "react-native";
 
@@ -17,7 +17,7 @@ export default function Home() {
           <View className="flex flex-col gap-4 px-4">
             <AiBanner />
           </View>
-          <RoutesView />
+          <WorkOrdersView />
           <InovaUniversity />
         </View>
       </ScrollView>

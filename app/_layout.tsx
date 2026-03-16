@@ -1,4 +1,5 @@
 import { AuthProvider } from "@/context/AuthContext";
+import { StartedOrdersProvider } from "@/context/StartedOrdersContext";
 import { ContextProvider } from "@/context/contextProvider";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import {
@@ -36,6 +37,7 @@ export default function RootLayout() {
   return (
     <ContextProvider>
       <AuthProvider>
+        <StartedOrdersProvider>
         <ThemeProvider
           value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
         >
@@ -54,6 +56,34 @@ export default function RootLayout() {
               options={{ headerShown: false }}
             />
             <Stack.Screen
+              name="route/[routeId]"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="order/[orderId]"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="work-order/[id]"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="work-order/[id]/complete"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="work-order/[id]/report-issue"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="work-order/[id]/service/[cipServiceId]"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="work-order/[id]/service/[cipServiceId]/report-issue"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
               name="loading"
               options={{ headerShown: false, animation: "fade" }}
             />
@@ -61,6 +91,7 @@ export default function RootLayout() {
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>
+        </StartedOrdersProvider>
       </AuthProvider>
     </ContextProvider>
   );
