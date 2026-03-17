@@ -1,3 +1,4 @@
+import { ServiceStatusBadge } from "@/components/ServiceStatusBadge";
 import { Text } from "@/components/PoppinsText";
 import { orderKey, useStartedOrders } from "@/context/StartedOrdersContext";
 import { useWorkOrders } from "@/hooks/useWorkOrders";
@@ -6,22 +7,6 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, CheckCircle, Home, ListTodo } from "lucide-react-native";
 import { useCallback, useMemo } from "react";
 import { ScrollView, TouchableOpacity, View } from "react-native";
-
-function getStatusLabel(status: WorkOrderApi["status"] | CipServiceInWorkOrder["status"]): string {
-  switch (status) {
-    case "pending":
-    case "scheduled":
-      return "A fazer";
-    case "in_progress":
-      return "Em andamento";
-    case "completed":
-      return "Concluída";
-    case "cancelled":
-      return "Cancelada";
-    default:
-      return status ?? "A fazer";
-  }
-}
 
 export default function OrderDetailScreen() {
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
@@ -133,9 +118,6 @@ export default function OrderDetailScreen() {
             const isClickable =
               (started || allFinished) &&
               (isRouteOrder || (servicesList.length === 1 && !!workOrder));
-            const statusLabel = getStatusLabel(
-              s.status ?? workOrder?.status ?? "pending"
-            );
             const cancellationText =
               s.status === "cancelled" &&
               (s.cancellationReasonName || s.cancellationReason)
@@ -169,11 +151,9 @@ export default function OrderDetailScreen() {
                       </Text>
                     )}
                   </View>
-                  <View className="bg-primary-100 px-3 py-1 rounded-full">
-                    <Text className="text-primary-600 text-xs font-poppins-bold">
-                      {statusLabel}
-                    </Text>
-                  </View>
+                  <ServiceStatusBadge
+                    status={s.status ?? workOrder?.status ?? "pending"}
+                  />
                 </TouchableOpacity>
               );
             }
@@ -205,11 +185,9 @@ export default function OrderDetailScreen() {
                       </Text>
                     )}
                   </View>
-                  <View className="bg-primary-100 px-3 py-1 rounded-full">
-                    <Text className="text-primary-600 text-xs font-poppins-bold">
-                      {statusLabel}
-                    </Text>
-                  </View>
+                  <ServiceStatusBadge
+                    status={s.status ?? workOrder?.status ?? "pending"}
+                  />
                 </TouchableOpacity>
               );
             }
@@ -217,21 +195,26 @@ export default function OrderDetailScreen() {
             return (
               <View
                 key={s.id ?? idx}
-                className="rounded-lg border border-gray-200 bg-gray-50 p-3"
+                className="rounded-lg border border-gray-200 bg-gray-50 p-3 flex-row items-center justify-between"
               >
-                <Text className="text-primary-500 font-poppins-medium">
-                  {s.serviceModel?.name ?? "Serviço"}
-                </Text>
-                <Text className="text-secondary-500 text-sm mt-0.5">
-                  {s.cip?.subset?.set?.equipment?.name ??
-                    s.cip?.subset?.set?.equipment?.tag ??
-                    "—"}
-                </Text>
-                {cancellationText && (
-                  <Text className="text-secondary-500 text-xs mt-1">
-                    {cancellationText}
+                <View className="flex-1">
+                  <Text className="text-primary-500 font-poppins-medium">
+                    {s.serviceModel?.name ?? "Serviço"}
                   </Text>
-                )}
+                  <Text className="text-secondary-500 text-sm mt-0.5">
+                    {s.cip?.subset?.set?.equipment?.name ??
+                      s.cip?.subset?.set?.equipment?.tag ??
+                      "—"}
+                  </Text>
+                  {cancellationText && (
+                    <Text className="text-secondary-500 text-xs mt-1">
+                      {cancellationText}
+                    </Text>
+                  )}
+                </View>
+                <ServiceStatusBadge
+                  status={s.status ?? workOrder?.status ?? "pending"}
+                />
               </View>
             );
           })}

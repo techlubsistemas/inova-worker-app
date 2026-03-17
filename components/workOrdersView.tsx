@@ -95,8 +95,19 @@ function sortListByDate(items: WorkOrderListItem[]): WorkOrderListItem[] {
   return [...items].sort((a, b) => sortKey(a) - sortKey(b));
 }
 
-export function WorkOrdersView() {
-  const { workOrders, loading, error, refetch } = useWorkOrders();
+export interface WorkOrdersViewProps {
+  workOrders?: WorkOrderApi[];
+  loading?: boolean;
+  error?: string | null;
+  refetch?: () => Promise<void>;
+}
+
+export function WorkOrdersView(props?: WorkOrdersViewProps) {
+  const hook = useWorkOrders();
+  const workOrders = props?.workOrders ?? hook.workOrders;
+  const loading = props?.loading ?? hook.loading;
+  const error = props?.error ?? hook.error;
+  const refetch = props?.refetch ?? hook.refetch;
   const [selectedTab, setSelectedTab] = useState<TabIndex>(0);
 
   useFocusEffect(
@@ -178,7 +189,11 @@ export function WorkOrdersView() {
         {listItems.length === 0 ? (
           <View className="py-12 px-4 items-center">
             <Text className="text-secondary-500 text-center">
-              Nenhuma ordem de serviço nesta aba.
+              {selectedTab === 0
+                ? "Nenhuma ordem de serviço a fazer"
+                : selectedTab === 1
+                  ? "Nenhuma ordem de serviço em andamento"
+                  : "Nenhuma ordem de serviço concluída"}
             </Text>
           </View>
         ) : (

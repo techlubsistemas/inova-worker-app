@@ -9,6 +9,7 @@ export interface CipServiceInWorkOrder {
   id: string;
   serviceModel?: { id: string; name: string } | null;
   team?: { id: string; name: string } | null;
+  toolkit?: { id: string; name: string; description?: string | null } | null;
   cip?: {
     subset?: {
       set?: {
@@ -17,6 +18,11 @@ export interface CipServiceInWorkOrder {
           name: string | null;
           tag: string;
           sector?: { name: string; area?: { name: string } } | null;
+          materials?: Array<{
+            material: { id: string; name: string; sku?: string | null; unitId?: string | null };
+            volume?: number | null;
+            unit?: { id: string; name?: string | null } | null;
+          }>;
         } | null;
       } | null;
     } | null;

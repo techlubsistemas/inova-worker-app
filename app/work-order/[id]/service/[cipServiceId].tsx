@@ -1,3 +1,5 @@
+import { ServiceStatusBadge } from "@/components/ServiceStatusBadge";
+import { ToolsAndMaterialsSection } from "@/components/ToolsAndMaterialsSection";
 import { Text } from "@/components/PoppinsText";
 import { useWorkOrders } from "@/hooks/useWorkOrders";
 import { updateWorkOrderServiceStatus } from "@/services/workOrder";
@@ -35,22 +37,6 @@ function formatDateTime(iso: string | null | undefined): string {
     });
   } catch {
     return "—";
-  }
-}
-
-function getStatusLabel(status: CipServiceInWorkOrder["status"]): string {
-  switch (status) {
-    case "pending":
-    case "scheduled":
-      return "A fazer";
-    case "in_progress":
-      return "Em andamento";
-    case "completed":
-      return "Concluída";
-    case "cancelled":
-      return "Cancelada";
-    default:
-      return "A fazer";
   }
 }
 
@@ -185,11 +171,7 @@ export default function WorkOrderServiceDetailScreen() {
         </Text>
         <Text className="text-secondary-500 text-sm">{equipmentName}</Text>
         <View className="flex-row items-center gap-2 mt-1">
-          <View className="bg-primary-100 px-2 py-0.5 rounded">
-            <Text className="text-primary-600 text-xs font-poppins-bold">
-              {getStatusLabel(serviceStatus)}
-            </Text>
-          </View>
+          <ServiceStatusBadge status={serviceStatus} />
         </View>
       </View>
 
@@ -219,6 +201,7 @@ export default function WorkOrderServiceDetailScreen() {
               <Text className="text-secondary-500 mt-1">—</Text>
             )}
           </View>
+          <ToolsAndMaterialsSection servicesList={[service]} />
         </View>
       </ScrollView>
 

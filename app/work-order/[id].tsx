@@ -2,6 +2,8 @@ import { Text } from "@/components/PoppinsText";
 import { orderKey, useStartedOrders } from "@/context/StartedOrdersContext";
 import { useWorkOrders } from "@/hooks/useWorkOrders";
 import { updateWorkOrderStatus } from "@/services/workOrder";
+import { ServiceStatusBadge } from "@/components/ServiceStatusBadge";
+import { ToolsAndMaterialsSection } from "@/components/ToolsAndMaterialsSection";
 import type { WorkOrderApi } from "@/types/workOrder";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
@@ -177,31 +179,121 @@ export default function WorkOrderDetailScreen() {
 
   if (singleOrderNotStarted) {
     return (
-      <View className="flex-1 bg-white p-4">
-        <TouchableOpacity onPress={() => router.back()} className="py-2 self-start">
-          <ArrowLeft color="#182D53" size={24} />
-        </TouchableOpacity>
-        <View className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-          <Text className="text-primary-500 font-poppins-bold text-lg">
-            Ordem de serviço não iniciada
-          </Text>
-          <Text className="text-secondary-500 mt-2">
-            Esta ordem de serviço ainda não foi iniciada. Inicie a execução da
-            ordem primeiro para poder executar o serviço.
-          </Text>
-          <TouchableOpacity
-            onPress={() =>
-              router.replace({
-                pathname: "/order/[orderId]",
-                params: { orderId: workOrder!.id },
-              })
-            }
-            className="bg-secondary-500 rounded-full py-3 items-center justify-center mt-4"
-          >
-            <Text className="text-white font-poppins-bold">
-              Ir para a ordem
-            </Text>
+      <View className="flex-1 bg-white">
+        <View className="px-4 pt-4 pb-2 border-b border-gray-200">
+          <TouchableOpacity onPress={() => router.back()} className="py-2 self-start">
+            <ArrowLeft color="#182D53" size={24} />
           </TouchableOpacity>
+          <Text className="text-primary-500 font-poppins-bold text-xl mt-2">
+            {serviceName}
+          </Text>
+          <Text className="text-secondary-500 text-sm">
+            {isRouteWO ? `${servicesList.length} serviço(s)` : equipmentName}
+          </Text>
+          <View className="flex-row items-center gap-2 mt-1">
+            {!isRouteWO && tag ? (
+              <View className="bg-secondary-100 px-2 py-0.5 rounded">
+                <Text className="text-secondary-500 text-xs font-poppins-bold">
+                  {tag}
+                </Text>
+              </View>
+            ) : null}
+            {workOrder.route && (
+              <Text className="text-secondary-500 text-xs">
+                Rota: {workOrder.route.name}
+              </Text>
+            )}
+          </View>
+        </View>
+        <ScrollView className="flex-1 p-4" showsVerticalScrollIndicator={false}>
+          <View className="gap-4">
+            {isRouteWO && servicesList.length > 0 ? (
+              <View className="border-b border-gray-200 pb-4">
+                <Text className="text-secondary-400 text-xs font-poppins-bold uppercase">
+                  Serviços desta ordem
+                </Text>
+                <View className="mt-2 gap-2">
+                  {servicesList.map((s, idx) => (
+                    <View
+                      key={s.id ?? idx}
+                      className="rounded-lg border border-gray-200 bg-gray-50 p-3"
+                    >
+                      <Text className="text-primary-500 font-poppins-medium">
+                        {s.serviceModel?.name ?? "Serviço"}
+                      </Text>
+                      <Text className="text-secondary-500 text-sm mt-0.5">
+                        {s.cip?.subset?.set?.equipment?.name ??
+                          s.cip?.subset?.set?.equipment?.tag ??
+                          "—"}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+            <View className="border-b border-gray-200 pb-4">
+              <Text className="text-secondary-400 text-xs font-poppins-bold uppercase">
+                Local
+              </Text>
+              <Text className="text-primary-500 mt-1">{local}</Text>
+            </View>
+            <View className="border-b border-gray-200 pb-4">
+              <Text className="text-secondary-400 text-xs font-poppins-bold uppercase">
+                Status
+              </Text>
+              <View className="mt-1">
+                <ServiceStatusBadge
+                  status={workOrder.status}
+                  label={
+                    workOrder.status === "in_progress" ? "Em execução" : undefined
+                  }
+                />
+              </View>
+            </View>
+            <View className="border-b border-gray-200 pb-4">
+              <Text className="text-secondary-400 text-xs font-poppins-bold uppercase">
+                Datas
+              </Text>
+              <Text className="text-primary-500 mt-1">
+                Agendada: {formatDateTime(workOrder.scheduledAt)}
+              </Text>
+              {workOrder.executedAt && (
+                <Text className="text-primary-500 mt-1">
+                  Início execução: {formatDateTime(workOrder.executedAt)}
+                </Text>
+              )}
+              {workOrder.completedAt && (
+                <Text className="text-primary-500 mt-1">
+                  Conclusão: {formatDateTime(workOrder.completedAt)}
+                </Text>
+              )}
+            </View>
+            <ToolsAndMaterialsSection servicesList={servicesList} />
+          </View>
+        </ScrollView>
+        <View className="p-4 border-t border-gray-200">
+          <View className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+            <Text className="text-primary-500 font-poppins-bold text-lg">
+              Ordem de serviço não iniciada
+            </Text>
+            <Text className="text-secondary-500 mt-2">
+              Esta ordem de serviço ainda não foi iniciada. Inicie a execução da
+              ordem primeiro para poder executar o serviço.
+            </Text>
+            <TouchableOpacity
+              onPress={() =>
+                router.replace({
+                  pathname: "/order/[orderId]",
+                  params: { orderId: workOrder.id },
+                })
+              }
+              className="bg-secondary-500 rounded-full py-3 items-center justify-center mt-4"
+            >
+              <Text className="text-white font-poppins-bold">
+                Ir para a ordem
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
@@ -278,16 +370,19 @@ export default function WorkOrderDetailScreen() {
                 {servicesList.map((s, idx) => (
                   <View
                     key={s.id ?? idx}
-                    className="rounded-lg border border-gray-200 bg-gray-50 p-3"
+                    className="rounded-lg border border-gray-200 bg-gray-50 p-3 flex-row items-center justify-between"
                   >
-                    <Text className="text-primary-500 font-poppins-medium">
-                      {s.serviceModel?.name ?? "Serviço"}
-                    </Text>
-                    <Text className="text-secondary-500 text-sm mt-0.5">
-                      {s.cip?.subset?.set?.equipment?.name ??
-                        s.cip?.subset?.set?.equipment?.tag ??
-                        "—"}
-                    </Text>
+                    <View className="flex-1">
+                      <Text className="text-primary-500 font-poppins-medium">
+                        {s.serviceModel?.name ?? "Serviço"}
+                      </Text>
+                      <Text className="text-secondary-500 text-sm mt-0.5">
+                        {s.cip?.subset?.set?.equipment?.name ??
+                          s.cip?.subset?.set?.equipment?.tag ??
+                          "—"}
+                      </Text>
+                    </View>
+                    <ServiceStatusBadge status={s.status} />
                   </View>
                 ))}
               </View>
@@ -303,15 +398,14 @@ export default function WorkOrderDetailScreen() {
             <Text className="text-secondary-400 text-xs font-poppins-bold uppercase">
               Status
             </Text>
-            <Text className="text-primary-500 mt-1">
-              {workOrder.status === "pending" || workOrder.status === "scheduled"
-                ? "A fazer"
-                : workOrder.status === "in_progress"
-                ? "Em execução"
-                : workOrder.status === "completed"
-                ? "Concluída"
-                : "Cancelada"}
-            </Text>
+            <View className="mt-1">
+              <ServiceStatusBadge
+                status={workOrder.status}
+                label={
+                  workOrder.status === "in_progress" ? "Em execução" : undefined
+                }
+              />
+            </View>
           </View>
           <View className="border-b border-gray-200 pb-4">
             <Text className="text-secondary-400 text-xs font-poppins-bold uppercase">
@@ -331,6 +425,7 @@ export default function WorkOrderDetailScreen() {
               </Text>
             )}
           </View>
+          <ToolsAndMaterialsSection servicesList={servicesList} />
         </View>
       </ScrollView>
 

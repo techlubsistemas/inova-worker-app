@@ -25,6 +25,7 @@
     },
     "plugins": [
       "expo-router",
+      ["expo-navigation-bar", { "visibility": "hidden" }],
       [
         "expo-splash-screen",
         {

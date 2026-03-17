@@ -3,8 +3,9 @@ import { Text } from "@/components/PoppinsText";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "expo-router";
 import { Eye, EyeOff, Lock, User } from "lucide-react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -17,8 +18,14 @@ export default function HomeScreen() {
   const [isShowingPassword, setIsShowingPassword] = useState(false);
   const [cpf, setCpf] = useState("");
   const [password, setPassword] = useState("");
-  const { signIn, isLoading } = useAuth();
+  const { signIn, isLoading, worker } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && worker) {
+      router.replace("/home");
+    }
+  }, [isLoading, worker, router]);
 
   async function handleLogin() {
     try {
@@ -30,6 +37,14 @@ export default function HomeScreen() {
     } catch (error: any) {
       Alert.alert("Erro no login", error.message);
     }
+  }
+
+  if (isLoading) {
+    return (
+      <View className="h-full w-full bg-white items-center justify-center flex flex-col">
+        <ActivityIndicator size="large" color="#ED6842" />
+      </View>
+    );
   }
 
   return (

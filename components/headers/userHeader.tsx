@@ -1,11 +1,11 @@
-import { useRouter } from "expo-router";
+import { useAuth } from "@/context/AuthContext";
 import { LogOut } from "lucide-react-native";
 import { Alert, Image, TouchableOpacity, View } from "react-native";
 import { LinearGradient } from "../linearGradient";
 import { Text } from "../PoppinsText";
 
 export function UserHeader() {
-  const router = useRouter();
+  const { signOut, worker } = useAuth();
   return (
     <View className="w-full h-52 relative rounded-b-[35px] overflow-hidden flex flex-col items-center justify-center ">
       <LinearGradient />
@@ -25,7 +25,7 @@ export function UserHeader() {
                 },
                 {
                   text: "Sair",
-                  onPress: () => router.replace("/"),
+                  onPress: () => signOut(),
                 },
               ]);
             }}
@@ -35,10 +35,10 @@ export function UserHeader() {
         </View>
         <View className="flex flex-col ">
           <Text className="text-white font-poppins-bold text-2xl">
-            Olá João Stel
+            Olá {worker?.name ?? ""}
           </Text>
           <Text className="text-white opacity-60">
-            Dia {new Intl.DateTimeFormat("pt-BR").format(new Date())}
+            {new Intl.DateTimeFormat("pt-BR").format(new Date())}
           </Text>
         </View>
       </View>
