@@ -2,6 +2,7 @@ export type WorkOrderStatus =
   | "pending"
   | "scheduled"
   | "in_progress"
+  | "paused"
   | "completed"
   | "cancelled";
 
@@ -38,6 +39,8 @@ export interface CipServiceInWorkOrder {
 
 export interface WorkOrderApi {
   id: string;
+  /** Codigo sequencial da WO (exibido como 8 digitos: OS 00000123). */
+  code?: number | null;
   cipServiceId: string | null;
   routeId: string | null;
   status: WorkOrderStatus;
@@ -56,6 +59,7 @@ export interface WorkOrderApi {
   /** Lista de serviços da WO (1 para avulso, N para rota). */
   cipServices?: CipServiceInWorkOrder[];
   assignedWorkerIds?: string[];
+  totalExecutionTimeMinutes?: number;
 }
 
 export interface WorkOrdersResponse {

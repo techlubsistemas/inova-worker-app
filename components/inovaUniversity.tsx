@@ -1,9 +1,5 @@
-import { useModal } from "@/context/modalContext";
-import { useTutorials } from "@/hooks/useTutorials";
 import type { Tutorial } from "@/types/tutorial";
-import { useFocusEffect } from "expo-router";
-import { EllipsisVertical, FileText, Video } from "lucide-react-native";
-import { useCallback } from "react";
+import { FileText, Video } from "lucide-react-native";
 import { TouchableOpacity, View } from "react-native";
 import { Text } from "./PoppinsText";
 
@@ -14,32 +10,20 @@ function getDiffDays(dateString: string) {
   const diffDays = Math.floor(diffTime / msPerDay);
   if (diffDays === 0) return "Hoje";
   if (diffDays === 1) return "Ontem";
-  return `${diffDays} dias atrás`;
+  return `${diffDays} dias atras`;
 }
 
 export interface InovaUniversityProps {
-  tutorials?: Tutorial[];
-  loading?: boolean;
-  refetch?: () => Promise<void>;
+  tutorials: Tutorial[];
+  loading: boolean;
+  onTutorialPress: (tutorial: Tutorial) => void;
 }
 
-export function InovaUniversity(props?: InovaUniversityProps) {
-  const hook = useTutorials();
-  const tutorials = props?.tutorials ?? hook.tutorials;
-  const loading = props?.loading ?? hook.loading;
-  const refetch = props?.refetch ?? hook.refetch;
-  const { openTutorialModal } = useModal();
-
-  useFocusEffect(
-    useCallback(() => {
-      refetch();
-    }, [refetch])
-  );
-
-  const handlePress = (tutorial: Tutorial) => {
-    openTutorialModal(tutorial);
-  };
-
+export function InovaUniversity({
+  tutorials,
+  loading,
+  onTutorialPress,
+}: InovaUniversityProps) {
   if (loading || tutorials.length === 0) {
     return null;
   }
@@ -51,33 +35,30 @@ export function InovaUniversity(props?: InovaUniversityProps) {
       </Text>
       <View className="flex flex-col gap-4 pb-6">
         {tutorials.map((tutorial) => (
-            <TouchableOpacity
-              onPress={() => handlePress(tutorial)}
-              key={tutorial.id}
-              className="flex flex-row shadow-md rounded-lg p-6 bg-white justify-between items-center"
-            >
-              <View className="flex flex-row gap-2 flex-1 items-center">
-                <View className="h-12 w-12 bg-secondary-400 rounded-lg flex items-center justify-center">
-                  {tutorial.type === "video" ? (
-                    <Video color="white" size={24} />
-                  ) : (
-                    <FileText color="white" size={24} />
-                  )}
-                </View>
-                <View className="flex flex-col flex-1">
-                  <Text className="text-primary-500 font-poppins-bold">
-                    {tutorial.name}
-                  </Text>
-                  <Text className="text-[#AEAEB3]">
-                    {getDiffDays(tutorial.createdAt)}
-                  </Text>
-                </View>
+          <TouchableOpacity
+            onPress={() => onTutorialPress(tutorial)}
+            key={tutorial.id}
+            className="flex flex-row shadow-md rounded-lg p-6 bg-white justify-between items-center"
+          >
+            <View className="flex flex-row gap-2 flex-1 items-center">
+              <View className="h-12 w-12 bg-secondary-400 rounded-lg flex items-center justify-center">
+                {tutorial.type === "video" ? (
+                  <Video color="white" size={24} />
+                ) : (
+                  <FileText color="white" size={24} />
+                )}
               </View>
-              <TouchableOpacity>
-                <EllipsisVertical color="#D8DEF3" />
-              </TouchableOpacity>
-            </TouchableOpacity>
-          ))}
+              <View className="flex flex-col flex-1">
+                <Text className="text-primary-500 font-poppins-bold">
+                  {tutorial.name}
+                </Text>
+                <Text className="text-[#AEAEB3]">
+                  {getDiffDays(tutorial.createdAt)}
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        ))}
       </View>
     </View>
   );

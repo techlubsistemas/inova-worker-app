@@ -49,8 +49,8 @@ export default function WorkOrderCompleteScreen() {
           Concluir ordem de serviço
         </Text>
         <Text className="text-secondary-500 text-center mt-2">
-          Confirme que todos os serviços desta ordem foram realizados com
-          sucesso.
+          Ao confirmar, todos os serviços que não tiveram problema relatado
+          serão automaticamente marcados como concluídos com sucesso.
         </Text>
 
         <TouchableOpacity

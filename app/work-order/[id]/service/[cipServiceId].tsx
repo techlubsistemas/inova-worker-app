@@ -2,14 +2,12 @@ import { ServiceStatusBadge } from "@/components/ServiceStatusBadge";
 import { ToolsAndMaterialsSection } from "@/components/ToolsAndMaterialsSection";
 import { Text } from "@/components/PoppinsText";
 import { useWorkOrders } from "@/hooks/useWorkOrders";
-import { updateWorkOrderServiceStatus } from "@/services/workOrder";
 import type { CipServiceInWorkOrder } from "@/types/workOrder";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeft } from "lucide-react-native";
-import { useCallback, useMemo, useState } from "react";
+import { ArrowLeft, AlertTriangle } from "lucide-react-native";
+import { useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   TouchableOpacity,
   View,
@@ -47,7 +45,6 @@ export default function WorkOrderServiceDetailScreen() {
   }>();
   const router = useRouter();
   const { workOrders, loading, error, refetch } = useWorkOrders();
-  const [updating, setUpdating] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -67,52 +64,9 @@ export default function WorkOrderServiceDetailScreen() {
   );
 
   const serviceStatus = service?.status ?? "pending";
-  const canStart =
-    serviceStatus === "pending" || serviceStatus === "scheduled";
-  const inProgress = serviceStatus === "in_progress";
-  const isFinished =
-    serviceStatus === "completed" || serviceStatus === "cancelled";
-
-  const handleStartExecution = useCallback(async () => {
-    if (!workOrderId || !cipServiceId || !workOrder) return;
-    setUpdating(true);
-    try {
-      await updateWorkOrderServiceStatus(workOrderId, cipServiceId, {
-        status: "in_progress",
-        executedAt: new Date().toISOString(),
-      });
-      await refetch();
-    } catch (err) {
-      const msg =
-        err && typeof err === "object" && "message" in err
-          ? (err as Error).message
-          : "Não foi possível iniciar a execução.";
-      Alert.alert("Erro", msg);
-    } finally {
-      setUpdating(false);
-    }
-  }, [workOrderId, cipServiceId, workOrder, refetch]);
-
-  const handleComplete = useCallback(async () => {
-    if (!workOrderId || !cipServiceId) return;
-    setUpdating(true);
-    try {
-      await updateWorkOrderServiceStatus(workOrderId, cipServiceId, {
-        status: "completed",
-        completedAt: new Date().toISOString(),
-      });
-      await refetch();
-      router.back();
-    } catch (err) {
-      const msg =
-        err && typeof err === "object" && "message" in err
-          ? (err as Error).message
-          : "Não foi possível concluir o serviço.";
-      Alert.alert("Erro", msg);
-    } finally {
-      setUpdating(false);
-    }
-  }, [workOrderId, cipServiceId, refetch, router]);
+  const isCancelled = serviceStatus === "cancelled";
+  const isCompleted = serviceStatus === "completed";
+  const canReportProblem = !isCancelled && !isCompleted;
 
   if (loading && !workOrder) {
     return (
@@ -159,6 +113,10 @@ export default function WorkOrderServiceDetailScreen() {
     service.cip?.subset?.set?.equipment?.tag ??
     "—";
   const local = getLocal(service);
+  const cancellationText =
+    isCancelled
+      ? service.cancellationReasonName || service.cancellationReason || null
+      : null;
 
   return (
     <View className="flex-1 bg-white">
@@ -201,61 +159,41 @@ export default function WorkOrderServiceDetailScreen() {
               <Text className="text-secondary-500 mt-1">—</Text>
             )}
           </View>
+
+          {/* Mostrar motivo do problema se cancelado */}
+          {isCancelled && cancellationText && (
+            <View className="border-b border-gray-200 pb-4">
+              <Text className="text-secondary-400 text-xs font-poppins-bold uppercase">
+                Problema relatado
+              </Text>
+              <View className="flex-row items-start gap-2 mt-1">
+                <AlertTriangle color="#ef4444" size={16} />
+                <Text className="text-red-600 flex-1">{cancellationText}</Text>
+              </View>
+            </View>
+          )}
+
           <ToolsAndMaterialsSection servicesList={[service]} />
         </View>
       </ScrollView>
 
-      {!isFinished && (
-        <View className="p-4 border-t border-gray-200 gap-3">
-          {canStart && (
-            <TouchableOpacity
-              onPress={handleStartExecution}
-              disabled={updating}
-              className="bg-secondary-500 rounded-full py-4 items-center justify-center"
-            >
-              {updating ? (
-                <ActivityIndicator color="white" size="small" />
-              ) : (
-                <Text className="text-white font-poppins-bold text-lg">
-                  INICIAR EXECUÇÃO
-                </Text>
-              )}
-            </TouchableOpacity>
-          )}
-          {inProgress && (
-            <>
-              <Text className="text-center text-secondary-500 font-poppins-medium">
-                Encerrar execução deste serviço:
-              </Text>
-              <TouchableOpacity
-                onPress={handleComplete}
-                disabled={updating}
-                className="bg-green-600 rounded-full py-4 items-center justify-center"
-              >
-                {updating ? (
-                  <ActivityIndicator color="white" size="small" />
-                ) : (
-                  <Text className="text-white font-poppins-bold text-lg">
-                    CONCLUIR COM SUCESSO
-                  </Text>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() =>
-                  router.push({
-                    pathname: "/work-order/[id]/service/[cipServiceId]/report-issue",
-                    params: { id: workOrderId!, cipServiceId: cipServiceId! },
-                  })
-                }
-                disabled={updating}
-                className="bg-red-500 rounded-full py-4 items-center justify-center"
-              >
-                <Text className="text-white font-poppins-bold text-lg">
-                  RELATAR PROBLEMA
-                </Text>
-              </TouchableOpacity>
-            </>
-          )}
+      {/* Apenas botão de relatar problema, se ainda não foi relatado */}
+      {canReportProblem && (
+        <View className="p-4 border-t border-gray-200">
+          <TouchableOpacity
+            onPress={() =>
+              router.push({
+                pathname: "/work-order/[id]/service/[cipServiceId]/report-issue",
+                params: { id: workOrderId!, cipServiceId: cipServiceId! },
+              })
+            }
+            className="bg-red-500 rounded-full py-4 items-center justify-center flex-row gap-2"
+          >
+            <AlertTriangle color="white" size={20} />
+            <Text className="text-white font-poppins-bold text-lg">
+              RELATAR PROBLEMA
+            </Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>

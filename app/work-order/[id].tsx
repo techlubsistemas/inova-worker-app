@@ -1,12 +1,12 @@
 import { Text } from "@/components/PoppinsText";
 import { orderKey, useStartedOrders } from "@/context/StartedOrdersContext";
 import { useWorkOrders } from "@/hooks/useWorkOrders";
-import { updateWorkOrderStatus } from "@/services/workOrder";
+import { updateWorkOrderStatus, pauseWorkOrder, resumeWorkOrder } from "@/services/workOrder";
 import { ServiceStatusBadge } from "@/components/ServiceStatusBadge";
 import { ToolsAndMaterialsSection } from "@/components/ToolsAndMaterialsSection";
 import type { WorkOrderApi } from "@/types/workOrder";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeft } from "lucide-react-native";
+import { ArrowLeft, CheckCircle, Pause, Play } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -40,6 +40,14 @@ function formatDateTime(iso: string | null): string {
   } catch {
     return "—";
   }
+}
+
+function formatExecutionTime(minutes: number | undefined): string | null {
+  if (minutes == null) return null;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h > 0) return `${h}h ${m}min`;
+  return `${m}min`;
 }
 
 export default function WorkOrderDetailScreen() {
@@ -83,6 +91,40 @@ export default function WorkOrderDetailScreen() {
       setUpdating(false);
     }
   }, [id, workOrder, refetch, startOrder]);
+
+  const handlePause = useCallback(async () => {
+    if (!id) return;
+    setUpdating(true);
+    try {
+      await pauseWorkOrder(id);
+      await refetch();
+    } catch (err) {
+      const msg =
+        err && typeof err === "object" && "message" in err
+          ? (err as Error).message
+          : "Não foi possível pausar a execução.";
+      Alert.alert("Erro", msg);
+    } finally {
+      setUpdating(false);
+    }
+  }, [id, refetch]);
+
+  const handleResume = useCallback(async () => {
+    if (!id) return;
+    setUpdating(true);
+    try {
+      await resumeWorkOrder(id);
+      await refetch();
+    } catch (err) {
+      const msg =
+        err && typeof err === "object" && "message" in err
+          ? (err as Error).message
+          : "Não foi possível retomar a execução.";
+      Alert.alert("Erro", msg);
+    } finally {
+      setUpdating(false);
+    }
+  }, [id, refetch]);
 
   if (loading && !workOrder) {
     return (
@@ -141,8 +183,10 @@ export default function WorkOrderDetailScreen() {
   const canStart =
     workOrder.status === "pending" || workOrder.status === "scheduled";
   const inProgress = workOrder.status === "in_progress";
+  const isPaused = workOrder.status === "paused";
   const isFinished =
     workOrder.status === "completed" || workOrder.status === "cancelled";
+  const executionTimeText = formatExecutionTime(workOrder.totalExecutionTimeMinutes);
 
   if (routeNotStarted) {
     const routeName = workOrder.route?.name || workOrder.route?.code || "Ordem de serviço";
@@ -242,12 +286,7 @@ export default function WorkOrderDetailScreen() {
                 Status
               </Text>
               <View className="mt-1">
-                <ServiceStatusBadge
-                  status={workOrder.status}
-                  label={
-                    workOrder.status === "in_progress" ? "Em execução" : undefined
-                  }
-                />
+                <ServiceStatusBadge status={workOrder.status} />
               </View>
             </View>
             <View className="border-b border-gray-200 pb-4">
@@ -310,8 +349,8 @@ export default function WorkOrderDetailScreen() {
             Ordem com vários serviços
           </Text>
           <Text className="text-secondary-500 mt-2">
-            Esta ordem contém vários serviços. Acesse a ordem para executar cada
-            serviço individualmente.
+            Esta ordem contém vários serviços. Acesse a ordem para gerenciar a
+            execução.
           </Text>
           <TouchableOpacity
             onPress={() =>
@@ -356,56 +395,31 @@ export default function WorkOrderDetailScreen() {
               Rota: {workOrder.route.name}
             </Text>
           )}
+          <ServiceStatusBadge
+            status={workOrder.status}
+            label={
+              workOrder.status === "in_progress"
+                ? "Em execução"
+                : workOrder.status === "paused"
+                  ? "Pausada"
+                  : undefined
+            }
+          />
         </View>
+        {executionTimeText && (
+          <Text className="text-secondary-500 text-xs mt-1">
+            Tempo de execução: {executionTimeText}
+          </Text>
+        )}
       </View>
 
       <ScrollView className="flex-1 p-4" showsVerticalScrollIndicator={false}>
         <View className="gap-4">
-          {isRouteWO && servicesList.length > 0 ? (
-            <View className="border-b border-gray-200 pb-4">
-              <Text className="text-secondary-400 text-xs font-poppins-bold uppercase">
-                Serviços desta ordem
-              </Text>
-              <View className="mt-2 gap-2">
-                {servicesList.map((s, idx) => (
-                  <View
-                    key={s.id ?? idx}
-                    className="rounded-lg border border-gray-200 bg-gray-50 p-3 flex-row items-center justify-between"
-                  >
-                    <View className="flex-1">
-                      <Text className="text-primary-500 font-poppins-medium">
-                        {s.serviceModel?.name ?? "Serviço"}
-                      </Text>
-                      <Text className="text-secondary-500 text-sm mt-0.5">
-                        {s.cip?.subset?.set?.equipment?.name ??
-                          s.cip?.subset?.set?.equipment?.tag ??
-                          "—"}
-                      </Text>
-                    </View>
-                    <ServiceStatusBadge status={s.status} />
-                  </View>
-                ))}
-              </View>
-            </View>
-          ) : null}
           <View className="border-b border-gray-200 pb-4">
             <Text className="text-secondary-400 text-xs font-poppins-bold uppercase">
               Local
             </Text>
             <Text className="text-primary-500 mt-1">{local}</Text>
-          </View>
-          <View className="border-b border-gray-200 pb-4">
-            <Text className="text-secondary-400 text-xs font-poppins-bold uppercase">
-              Status
-            </Text>
-            <View className="mt-1">
-              <ServiceStatusBadge
-                status={workOrder.status}
-                label={
-                  workOrder.status === "in_progress" ? "Em execução" : undefined
-                }
-              />
-            </View>
           </View>
           <View className="border-b border-gray-200 pb-4">
             <Text className="text-secondary-400 text-xs font-poppins-bold uppercase">
@@ -448,9 +462,6 @@ export default function WorkOrderDetailScreen() {
           )}
           {inProgress && (
             <>
-              <Text className="text-center text-secondary-500 font-poppins-medium">
-                Em execução — escolha como encerrar:
-              </Text>
               <TouchableOpacity
                 onPress={() =>
                   router.push({
@@ -458,26 +469,48 @@ export default function WorkOrderDetailScreen() {
                     params: { id: workOrder.id },
                   })
                 }
-                className="bg-green-600 rounded-full py-4 items-center justify-center"
+                className="bg-green-600 rounded-full py-4 items-center justify-center flex-row gap-2"
               >
+                <CheckCircle color="white" size={20} />
                 <Text className="text-white font-poppins-bold text-lg">
-                  CONCLUIR COM SUCESSO
+                  CONCLUIR EXECUÇÃO
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() =>
-                  router.push({
-                    pathname: "/work-order/[id]/report-issue",
-                    params: { id: workOrder.id },
-                  })
-                }
-                className="bg-red-500 rounded-full py-4 items-center justify-center"
+                onPress={handlePause}
+                disabled={updating}
+                className="bg-amber-500 rounded-full py-4 items-center justify-center flex-row gap-2"
               >
-                <Text className="text-white font-poppins-bold text-lg">
-                  RELATAR PROBLEMA
-                </Text>
+                {updating ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <>
+                    <Pause color="white" size={20} />
+                    <Text className="text-white font-poppins-bold text-lg">
+                      PAUSAR EXECUÇÃO
+                    </Text>
+                  </>
+                )}
               </TouchableOpacity>
             </>
+          )}
+          {isPaused && (
+            <TouchableOpacity
+              onPress={handleResume}
+              disabled={updating}
+              className="bg-secondary-500 rounded-full py-4 items-center justify-center flex-row gap-2"
+            >
+              {updating ? (
+                <ActivityIndicator color="white" size="small" />
+              ) : (
+                <>
+                  <Play color="white" size={20} />
+                  <Text className="text-white font-poppins-bold text-lg">
+                    RETOMAR EXECUÇÃO
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
           )}
         </View>
       )}

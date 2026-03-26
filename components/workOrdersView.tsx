@@ -1,37 +1,31 @@
-import { cn } from "@/utils/cn";
-import { useWorkOrders } from "@/hooks/useWorkOrders";
-import type {
-  WorkOrderApi,
-  WorkOrderListItem,
-  RouteGroup,
-} from "@/types/workOrder";
-import { useFocusEffect } from "expo-router";
-import { List, ListChecks, ListTodo } from "lucide-react-native";
-import { useCallback, useMemo, useState } from "react";
+import type { WorkOrderApi, WorkOrderListItem } from "@/types/workOrder";
+import { useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  RefreshControl,
+  Pressable,
+  StyleSheet,
   TouchableOpacity,
   View,
 } from "react-native";
 import { Text } from "./PoppinsText";
-import { RouteCard } from "./routeCard";
 import { WorkOrderCard } from "./workOrderCard";
+import { RouteCard } from "./routeCard";
 
 type TabIndex = 0 | 1 | 2;
 
+const TAB_LABELS: Record<TabIndex, string> = {
+  0: "A fazer",
+  1: "Em andamento",
+  2: "Concluidas",
+};
+
 function woMatchesTab(wo: WorkOrderApi, tab: TabIndex): boolean {
-  if (tab === 0)
-    return wo.status === "pending" || wo.status === "scheduled";
-  if (tab === 1) return wo.status === "in_progress";
+  if (tab === 0) return wo.status === "pending" || wo.status === "scheduled";
+  if (tab === 1) return wo.status === "in_progress" || wo.status === "paused";
   return wo.status === "completed" || wo.status === "cancelled";
 }
 
-/**
- * Lista: 1 item por WO. Rotas no novo modelo (1 WO com cipServices) vão para work-order/[id].
- * Legado: várias WOs com mesmo routeId+scheduledAt são agrupadas em um RouteCard -> /route/[routeId].
- */
 function buildListItems(workOrders: WorkOrderApi[]): WorkOrderListItem[] {
   const individuals: WorkOrderApi[] = [];
   const byRouteKey = new Map<string, WorkOrderApi[]>();
@@ -69,7 +63,7 @@ function buildListItems(workOrders: WorkOrderApi[]): WorkOrderListItem[] {
 
 function filterListByTab(
   items: WorkOrderListItem[],
-  tab: TabIndex
+  tab: TabIndex,
 ): WorkOrderListItem[] {
   return items.filter((item) => {
     if (item.type === "route") {
@@ -82,7 +76,9 @@ function filterListByTab(
 function sortKey(item: WorkOrderListItem): number {
   if (item.type === "route") {
     const dates = item.workOrders
-      .map((wo) => (wo.scheduledAt ? new Date(wo.scheduledAt).getTime() : Infinity))
+      .map((wo) =>
+        wo.scheduledAt ? new Date(wo.scheduledAt).getTime() : Infinity,
+      )
       .filter((t) => t !== Infinity);
     return dates.length ? Math.min(...dates) : Infinity;
   }
@@ -95,32 +91,56 @@ function sortListByDate(items: WorkOrderListItem[]): WorkOrderListItem[] {
   return [...items].sort((a, b) => sortKey(a) - sortKey(b));
 }
 
-export interface WorkOrdersViewProps {
-  workOrders?: WorkOrderApi[];
-  loading?: boolean;
-  error?: string | null;
-  refetch?: () => Promise<void>;
+function getItemKey(item: WorkOrderListItem): string {
+  return item.type === "route" ? `route-${item.routeId}` : item.workOrder.id;
 }
 
-export function WorkOrdersView(props?: WorkOrdersViewProps) {
-  const hook = useWorkOrders();
-  const workOrders = props?.workOrders ?? hook.workOrders;
-  const loading = props?.loading ?? hook.loading;
-  const error = props?.error ?? hook.error;
-  const refetch = props?.refetch ?? hook.refetch;
-  const [selectedTab, setSelectedTab] = useState<TabIndex>(0);
+export interface WorkOrdersViewProps {
+  workOrders: WorkOrderApi[];
+  loading: boolean;
+  error: string | null;
+  onRefetch: () => Promise<void>;
+  onNavigateToOrder: (orderId: string) => void;
+  onNavigateToRoute: (routeId: string) => void;
+}
 
-  useFocusEffect(
-    useCallback(() => {
-      refetch();
-    }, [refetch])
-  );
+export function WorkOrdersView({
+  workOrders,
+  loading,
+  error,
+  onRefetch,
+  onNavigateToOrder,
+  onNavigateToRoute,
+}: WorkOrdersViewProps) {
+  const [selectedTab, setSelectedTab] = useState<TabIndex>(0);
+  const flatListRef = useRef<FlatList<WorkOrderListItem>>(null);
+
+  const allItems = useMemo(() => buildListItems(workOrders), [workOrders]);
+
+  const tabCounts = useMemo(() => {
+    const counts: [number, number, number] = [0, 0, 0];
+    for (const item of allItems) {
+      for (const tab of [0, 1, 2] as TabIndex[]) {
+        if (item.type === "route") {
+          if (item.workOrders.some((wo) => woMatchesTab(wo, tab)))
+            counts[tab]++;
+        } else {
+          if (woMatchesTab(item.workOrder, tab)) counts[tab]++;
+        }
+      }
+    }
+    return counts;
+  }, [allItems]);
 
   const listItems = useMemo(
-    () =>
-      sortListByDate(filterListByTab(buildListItems(workOrders), selectedTab)),
-    [workOrders, selectedTab]
+    () => sortListByDate(filterListByTab(allItems, selectedTab)),
+    [allItems, selectedTab],
   );
+
+  const handleTabChange = (tab: TabIndex) => {
+    setSelectedTab(tab);
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+  };
 
   if (loading && workOrders.length === 0) {
     return (
@@ -136,7 +156,7 @@ export function WorkOrdersView(props?: WorkOrdersViewProps) {
       <View className="w-full py-8 px-4">
         <Text className="text-red-600 text-center">{error}</Text>
         <TouchableOpacity
-          onPress={() => refetch()}
+          onPress={() => onRefetch()}
           className="mt-4 bg-secondary-500 py-3 rounded-xl items-center"
         >
           <Text className="text-white font-poppins-bold">Tentar novamente</Text>
@@ -147,90 +167,156 @@ export function WorkOrdersView(props?: WorkOrdersViewProps) {
 
   return (
     <View className="w-full flex flex-col gap-4">
-      <View className="flex flex-row justify-between px-6">
-        <TouchableOpacity
-          onPress={() => setSelectedTab(0)}
-          className={cn(
-            "w-32 transition-all duration-700 border flex items-center justify-center gap-2 flex-row py-4 border-secondary-400",
-            selectedTab === 0
-              ? "bg-secondary-400/20 rounded-3xl"
-              : "bg-white rounded-2xl"
-          )}
-        >
-          <List color={"#182D53"} />
-          <Text className="text-sm text-primary-500">A Fazer</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setSelectedTab(1)}
-          className={cn(
-            "w-32 transition-all duration-700 border flex items-center justify-center gap-2 flex-row py-4 border-secondary-400",
-            selectedTab === 1
-              ? "bg-secondary-400/20 rounded-3xl"
-              : "bg-white rounded-2xl"
-          )}
-        >
-          <ListTodo color={"#182D53"} />
-          <Text className="text-sm text-primary-500">Em andamento</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setSelectedTab(2)}
-          className={cn(
-            "w-32 transition-all duration-700 border flex items-center justify-center gap-2 flex-row py-4 border-secondary-400",
-            selectedTab === 2
-              ? "bg-secondary-400/20 rounded-3xl"
-              : "bg-white rounded-2xl"
-          )}
-        >
-          <ListChecks color={"#182D53"} />
-          <Text className="text-sm text-primary-500">Concluídas</Text>
-        </TouchableOpacity>
+      {/* Tab bar */}
+      <View style={tabStyles.container}>
+        {([0, 1, 2] as TabIndex[]).map((tab) => {
+          const isActive = selectedTab === tab;
+          const count = tabCounts[tab];
+          return (
+            <Pressable
+              key={tab}
+              onPress={() => handleTabChange(tab)}
+              style={[tabStyles.tab, isActive && tabStyles.tabActive]}
+            >
+              <Text
+                style={[tabStyles.tabText, isActive && tabStyles.tabTextActive]}
+                numberOfLines={1}
+              >
+                {TAB_LABELS[tab]}
+              </Text>
+              {count > 0 && (
+                <View
+                  style={[
+                    tabStyles.badge,
+                    isActive ? tabStyles.badgeActive : tabStyles.badgeInactive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      tabStyles.badgeText,
+                      isActive
+                        ? tabStyles.badgeTextActive
+                        : tabStyles.badgeTextInactive,
+                    ]}
+                  >
+                    {count}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          );
+        })}
       </View>
-      <View className="flex">
-        {listItems.length === 0 ? (
-          <View className="py-12 px-4 items-center">
-            <Text className="text-secondary-500 text-center">
-              {selectedTab === 0
-                ? "Nenhuma ordem de serviço a fazer"
-                : selectedTab === 1
-                  ? "Nenhuma ordem de serviço em andamento"
-                  : "Nenhuma ordem de serviço concluída"}
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            data={listItems}
-            keyExtractor={(item) =>
-              item.type === "route" ? `route-${item.routeId}` : item.workOrder.id
-            }
-            ItemSeparatorComponent={() => <View className="w-4" />}
-            renderItem={({ item, index }) =>
-              item.type === "route" ? (
-                <RouteCard
-                  data={item}
-                  index={index}
-                  quantity={listItems.length - 1}
-                />
-              ) : (
-                <WorkOrderCard
-                  data={item.workOrder}
-                  index={index}
-                  quantity={listItems.length - 1}
-                  orderId={item.workOrder.id}
-                />
-              )
-            }
-            refreshControl={
-              <RefreshControl
-                refreshing={loading}
-                onRefresh={refetch}
-                colors={["#ED6842"]}
+
+      {/* Lista horizontal de WO cards */}
+      {listItems.length === 0 ? (
+        <View className="py-12 items-center px-4">
+          <Text className="text-secondary-500 text-center">
+            {selectedTab === 0
+              ? "Nenhuma ordem a fazer"
+              : selectedTab === 1
+                ? "Nenhuma ordem em andamento"
+                : "Nenhuma ordem concluida"}
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          ref={flatListRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          data={listItems}
+          extraData={selectedTab}
+          keyExtractor={getItemKey}
+          contentContainerStyle={listStyles.contentContainer}
+          ItemSeparatorComponent={() => <View style={listStyles.separator} />}
+          renderItem={({ item, index }) =>
+            item.type === "route" ? (
+              <RouteCard
+                data={item}
+                index={index}
+                quantity={listItems.length - 1}
+                onPress={() => onNavigateToRoute(item.routeId)}
               />
-            }
-          />
-        )}
-      </View>
+            ) : (
+              <WorkOrderCard
+                data={item.workOrder}
+                index={index}
+                quantity={listItems.length - 1}
+                onPress={() => onNavigateToOrder(item.workOrder.id)}
+              />
+            )
+          }
+        />
+      )}
     </View>
   );
 }
+
+const tabStyles = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    backgroundColor: "#f3f4f6",
+    borderRadius: 12,
+    marginHorizontal: 16,
+    padding: 4,
+  },
+  tab: {
+    flex: 1,
+    borderRadius: 8,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  tabActive: {
+    backgroundColor: "#ffffff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  tabText: {
+    fontSize: 12,
+    fontFamily: "Poppins_500Medium",
+    color: "#9ca3af",
+  },
+  tabTextActive: {
+    color: "#182D53",
+  },
+  badge: {
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badgeActive: {
+    backgroundColor: "#ED6842",
+  },
+  badgeInactive: {
+    backgroundColor: "#d1d5db",
+  },
+  badgeText: {
+    fontSize: 10,
+    fontFamily: "Poppins_700Bold",
+    lineHeight: 12,
+  },
+  badgeTextActive: {
+    color: "#ffffff",
+  },
+  badgeTextInactive: {
+    color: "#6b7280",
+  },
+});
+
+const listStyles = StyleSheet.create({
+  contentContainer: {
+    paddingHorizontal: 16,
+  },
+  separator: {
+    width: 12,
+  },
+});

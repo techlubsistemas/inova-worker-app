@@ -49,3 +49,11 @@ export async function updateWorkOrderServiceStatus(
     payload
   );
 }
+
+export async function pauseWorkOrder(workOrderId: string): Promise<void> {
+  await axios.put(`${API_URL}/work-order/single/${workOrderId}/pause`);
+}
+
+export async function resumeWorkOrder(workOrderId: string): Promise<void> {
+  await axios.put(`${API_URL}/work-order/single/${workOrderId}/resume`);
+}

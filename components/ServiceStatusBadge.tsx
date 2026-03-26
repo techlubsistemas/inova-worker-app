@@ -9,6 +9,8 @@ function getStatusLabel(status: WorkOrderStatus | undefined): string {
       return "A fazer";
     case "in_progress":
       return "Em andamento";
+    case "paused":
+      return "Pausada";
     case "completed":
       return "Concluída";
     case "cancelled":
@@ -27,6 +29,8 @@ function getStatusStyles(status: WorkOrderStatus | undefined): {
       return { bg: "bg-green-100", text: "text-green-800" };
     case "in_progress":
       return { bg: "bg-amber-100", text: "text-amber-800" };
+    case "paused":
+      return { bg: "bg-yellow-100", text: "text-yellow-800" };
     case "cancelled":
       return { bg: "bg-red-100", text: "text-red-800" };
     case "pending":

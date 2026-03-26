@@ -1,11 +1,8 @@
 import { cn } from "@/utils/cn";
-import { useRouter } from "expo-router";
-import { Calendar, MapPin } from "lucide-react-native";
+import { Calendar, MapPin, Pause } from "lucide-react-native";
 import { TouchableOpacity, View } from "react-native";
-import { LinearGradientOrange } from "./linearGradientOrange";
 import { Text } from "./PoppinsText";
-import type { WorkOrderApi } from "@/types/workOrder";
-import type { WorkOrderStatus } from "@/types/workOrder";
+import type { WorkOrderApi, WorkOrderStatus } from "@/types/workOrder";
 
 function getStatusLabel(status: WorkOrderStatus): string {
   switch (status) {
@@ -14,8 +11,10 @@ function getStatusLabel(status: WorkOrderStatus): string {
       return "A fazer";
     case "in_progress":
       return "Em andamento";
+    case "paused":
+      return "Pausada";
     case "completed":
-      return "Concluída";
+      return "Concluida";
     case "cancelled":
       return "Cancelada";
     default:
@@ -23,18 +22,38 @@ function getStatusLabel(status: WorkOrderStatus): string {
   }
 }
 
+function getStatusBadgeStyle(status: WorkOrderStatus): {
+  bg: string;
+  text: string;
+} {
+  switch (status) {
+    case "in_progress":
+      return { bg: "bg-amber-100", text: "text-amber-700" };
+    case "paused":
+      return { bg: "bg-yellow-100", text: "text-yellow-700" };
+    case "completed":
+      return { bg: "bg-green-100", text: "text-green-700" };
+    case "cancelled":
+      return { bg: "bg-red-100", text: "text-red-700" };
+    case "pending":
+    case "scheduled":
+    default:
+      return { bg: "bg-primary-100", text: "text-primary-600" };
+  }
+}
+
 function getLocal(wo: WorkOrderApi): string {
   const firstService = wo.cipService ?? wo.cipServices?.[0];
   const equipment = firstService?.cip?.subset?.set?.equipment;
-  if (!equipment) return "—";
+  if (!equipment) return "";
   const sector = equipment.sector?.name;
   const area = equipment.sector?.area?.name;
   if (sector && area) return `${area} / ${sector}`;
-  return sector ?? area ?? equipment.tag ?? "—";
+  return sector ?? area ?? "";
 }
 
 function formatDate(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "";
   try {
     const d = new Date(iso);
     return d.toLocaleDateString("pt-BR", {
@@ -43,87 +62,135 @@ function formatDate(iso: string | null): string {
       year: "numeric",
     });
   } catch {
-    return "—";
+    return "";
   }
+}
+
+/** Formata o codigo sequencial da WO: "OS 00000123". */
+function formatWoCode(code: number | null | undefined): string {
+  if (code == null) return "OS";
+  return `OS ${String(code).padStart(8, "0")}`;
 }
 
 interface WorkOrderCardProps {
   data: WorkOrderApi;
   index: number;
   quantity: number;
-  /** Quando definido, navega para a tela da ordem (ordem de 1 serviço) em vez do detalhe do WO. */
-  orderId?: string;
+  onPress: () => void;
 }
 
-export function WorkOrderCard({ data, index, quantity, orderId }: WorkOrderCardProps) {
-  const router = useRouter();
+export function WorkOrderCard({ data, onPress }: WorkOrderCardProps) {
   const firstService = data.cipService ?? data.cipServices?.[0];
-  const isRouteWO = !!(data.routeId && data.route && (data.cipServices?.length ?? 0) > 1);
-  const serviceName = isRouteWO
-    ? `${data.route!.name ?? data.route!.code ?? "Rota"}`
-    : (firstService?.serviceModel?.name ?? "Serviço");
-  const subtitle = isRouteWO
-    ? `${data.cipServices!.length} ${data.cipServices!.length === 1 ? "serviço" : "serviços"}`
-    : (firstService?.cip?.subset?.set?.equipment?.name ??
-       firstService?.cip?.subset?.set?.equipment?.tag ??
-       "—");
-  const tag = firstService?.cip?.subset?.set?.equipment?.tag ?? "—";
+  const isRouteWO = !!(
+    data.routeId &&
+    data.route &&
+    (data.cipServices?.length ?? 0) > 1
+  );
+
+  // Hierarquia: 1) Codigo WO  2) Nome rota/servico  3) Detalhes
+  const woCode = formatWoCode(data.code);
+  const title = isRouteWO
+    ? (data.route!.name || data.route!.code || "Rota")
+    : (firstService?.serviceModel?.name ?? "Servico");
+  const equipmentName =
+    firstService?.cip?.subset?.set?.equipment?.name ?? "";
+  const equipmentTag =
+    firstService?.cip?.subset?.set?.equipment?.tag ?? "";
   const local = getLocal(data);
   const date = formatDate(data.scheduledAt);
+  const serviceCount = data.cipServices?.length ?? (data.cipService ? 1 : 0);
+  const statusStyle = getStatusBadgeStyle(data.status);
 
   return (
     <TouchableOpacity
-      onPress={() =>
-        router.push({
-          pathname: orderId ? "/order/[orderId]" : "/work-order/[id]",
-          params: orderId ? { orderId } : { id: data.id },
-        })
-      }
-      className={cn(
-        "w-60 flex overflow-hidden h-60 rounded-2xl relative",
-        index === 0 ? "ml-6" : "",
-        index === quantity ? "mr-6" : ""
-      )}
+      onPress={onPress}
+      className="w-60 h-60 rounded-2xl overflow-hidden"
     >
-      <LinearGradientOrange />
-      <View className="absolute w-[80%] rounded-full h-[80%] -top-1/3 -right-1/3 bg-secondary-400 opacity-20 " />
-      <View className="absolute w-[80%] rounded-full h-[80%] -bottom-1/3 -left-1/3 bg-secondary-400 opacity-20 " />
-      <View className="flex flex-col h-full bg-gray-50 border border-gray-200 shadow-sm rounded-lg w-72 p-4 justify-between">
-        <View className="flex flex-row justify-between items-start">
-          <View className="flex flex-col gap-1">
-            <Text className="text-primary-500 font-poppins-bold text-lg leading-6 w-52">
-              {serviceName}
-            </Text>
-            <Text className="text-secondary-400 text-sm font-poppins-medium">
-              {subtitle}
-            </Text>
-            {!isRouteWO && tag ? (
-              <View className="bg-secondary-100 self-start px-2 py-0.5 rounded">
-                <Text className="text-secondary-500 text-xs font-poppins-bold">
-                  {tag}
+      <View className="flex flex-col h-full bg-white border border-gray-200 rounded-2xl p-4 justify-between">
+        {/* Topo: Codigo WO + badge status */}
+        <View className="flex flex-col gap-2">
+          <View className="flex flex-row justify-between items-center">
+            <View className="bg-secondary-500 px-2.5 py-1 rounded">
+              <Text className="text-white text-xs font-poppins-bold">
+                {woCode}
+              </Text>
+            </View>
+            <View
+              className={cn(
+                "px-2.5 py-1 rounded-full flex-row items-center gap-1",
+                statusStyle.bg,
+              )}
+            >
+              {data.status === "paused" && (
+                <Pause color="#a16207" size={10} />
+              )}
+              <Text
+                className={cn(
+                  "text-[10px] font-poppins-bold",
+                  statusStyle.text,
+                )}
+              >
+                {getStatusLabel(data.status)}
+              </Text>
+            </View>
+          </View>
+
+          {/* Nome do servico/rota */}
+          <Text
+            className="text-primary-500 font-poppins-bold text-base leading-5"
+            numberOfLines={2}
+          >
+            {title}
+          </Text>
+
+          {/* Equipamento + tag */}
+          {(equipmentName || equipmentTag) && (
+            <View className="flex flex-row items-center gap-1.5">
+              {equipmentTag ? (
+                <View className="bg-secondary-100 px-1.5 py-0.5 rounded">
+                  <Text className="text-secondary-500 text-[10px] font-poppins-bold">
+                    {equipmentTag}
+                  </Text>
+                </View>
+              ) : null}
+              {equipmentName ? (
+                <Text
+                  className="text-secondary-400 text-xs font-poppins-medium flex-1"
+                  numberOfLines={1}
+                >
+                  {equipmentName}
                 </Text>
-              </View>
-            ) : null}
-          </View>
-        </View>
+              ) : null}
+            </View>
+          )}
 
-        <View className="flex flex-col gap-2 mt-4">
-          <View className="flex flex-row gap-2 items-center">
-            <MapPin color={"#ED6842"} size={16} />
-            <Text className="text-secondary-500 text-sm">{local}</Text>
-          </View>
-          <View className="flex flex-row gap-2 items-center">
-            <Calendar color={"#ED6842"} size={16} />
-            <Text className="text-secondary-500 text-sm">{date}</Text>
-          </View>
-        </View>
-
-        <View className="flex flex-row justify-between items-center mt-2">
-          <View className="bg-primary-100 px-3 py-1 rounded-full">
-            <Text className="text-primary-600 text-xs font-poppins-bold">
-              {getStatusLabel(data.status)}
+          {/* Qtd servicos (se rota) */}
+          {isRouteWO && serviceCount > 1 && (
+            <Text className="text-secondary-400 text-xs font-poppins-medium">
+              {serviceCount} servicos
             </Text>
-          </View>
+          )}
+        </View>
+
+        {/* Detalhes: local + data */}
+        <View className="flex flex-col gap-1.5">
+          {local ? (
+            <View className="flex flex-row gap-1.5 items-center">
+              <MapPin color="#ED6842" size={14} />
+              <Text
+                className="text-secondary-500 text-xs flex-1"
+                numberOfLines={1}
+              >
+                {local}
+              </Text>
+            </View>
+          ) : null}
+          {date ? (
+            <View className="flex flex-row gap-1.5 items-center">
+              <Calendar color="#ED6842" size={14} />
+              <Text className="text-secondary-500 text-xs">{date}</Text>
+            </View>
+          ) : null}
         </View>
       </View>
     </TouchableOpacity>
