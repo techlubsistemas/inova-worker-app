@@ -4,6 +4,7 @@ import {
   type ServiceProblemReason,
 } from "@/services/problemReasons";
 import { updateWorkOrderServiceStatus } from "@/services/workOrder";
+import axios from "axios";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
@@ -17,13 +18,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import axios from "axios";
 
 const OTHER_ID = "other";
 
 function normalizeParam(p: string | string[] | undefined): string {
   if (p == null) return "";
-  return Array.isArray(p) ? p[0] ?? "" : p;
+  return Array.isArray(p) ? (p[0] ?? "") : p;
 }
 
 function getErrorMessage(err: unknown): string {
@@ -40,11 +40,11 @@ function getErrorMessage(err: unknown): string {
 }
 
 export default function WorkOrderServiceReportIssueScreen() {
-  const params = useLocalSearchParams<{ id: string; cipServiceId: string }>();
-  const workOrderId = useMemo(() => normalizeParam(params.id), [params.id]);
+  const params = useLocalSearchParams<{ orderId: string; cipServiceId: string }>();
+  const orderId = useMemo(() => normalizeParam(params.orderId), [params.orderId]);
   const cipServiceId = useMemo(
     () => normalizeParam(params.cipServiceId),
-    [params.cipServiceId]
+    [params.cipServiceId],
   );
   const router = useRouter();
   const [reasons, setReasons] = useState<ServiceProblemReason[]>([]);
@@ -70,22 +70,28 @@ export default function WorkOrderServiceReportIssueScreen() {
       return () => {
         cancelled = true;
       };
-    }, [])
+    }, []),
   );
 
   async function handleSubmit() {
-    if (!workOrderId || !cipServiceId) {
+    if (!orderId || !cipServiceId) {
       Alert.alert("Erro", "Ordem ou serviço não identificado.");
       return;
     }
     if (selectedId === null) {
-      Alert.alert("Campo obrigatório", "Selecione um motivo ou \"Outro\" e descreva o problema.");
+      Alert.alert(
+        "Campo obrigatório",
+        'Selecione um motivo ou "Outro" e descreva o problema.',
+      );
       return;
     }
     if (selectedId === OTHER_ID) {
       const trimmed = otherText.trim();
       if (!trimmed) {
-        Alert.alert("Campo obrigatório", "Descreva o problema quando escolher \"Outro\".");
+        Alert.alert(
+          "Campo obrigatório",
+          'Descreva o problema quando escolher "Outro".',
+        );
         return;
       }
     }
@@ -106,10 +112,10 @@ export default function WorkOrderServiceReportIssueScreen() {
       } else {
         payload.cancellationReasonId = selectedId;
       }
-      await updateWorkOrderServiceStatus(workOrderId, cipServiceId, payload);
+      await updateWorkOrderServiceStatus(orderId, cipServiceId, payload);
       router.replace({
         pathname: "/order/[orderId]",
-        params: { orderId: workOrderId },
+        params: { orderId },
       });
     } catch (err) {
       Alert.alert("Erro", getErrorMessage(err));
@@ -125,7 +131,7 @@ export default function WorkOrderServiceReportIssueScreen() {
     >
       <View className="flex-1 p-4">
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => router.replace({ pathname: "/order/[orderId]", params: { orderId } })}
           className="py-2 self-start"
         >
           <ArrowLeft color="#182D53" size={24} />
@@ -147,13 +153,16 @@ export default function WorkOrderServiceReportIssueScreen() {
           {loadingReasons ? (
             <View className="py-6 items-center">
               <ActivityIndicator size="small" color="#ED6842" />
-              <Text className="text-secondary-500 mt-2">Carregando motivos...</Text>
+              <Text className="text-secondary-500 mt-2">
+                Carregando motivos...
+              </Text>
             </View>
           ) : (
             <View className="gap-2">
               {reasons.length === 0 && (
                 <Text className="text-secondary-500 text-sm mb-2">
-                  Nenhum motivo cadastrado para sua empresa. Use &quot;Outro&quot; para descrever.
+                  Nenhum motivo cadastrado para sua empresa. Use
+                  &quot;Outro&quot; para descrever.
                 </Text>
               )}
               {reasons.map((r) => (
@@ -176,7 +185,9 @@ export default function WorkOrderServiceReportIssueScreen() {
                   />
                   <Text
                     className={`flex-1 font-poppins-medium ${
-                      selectedId === r.id ? "text-primary-600" : "text-primary-500"
+                      selectedId === r.id
+                        ? "text-primary-600"
+                        : "text-primary-500"
                     }`}
                   >
                     {r.name}
@@ -201,7 +212,9 @@ export default function WorkOrderServiceReportIssueScreen() {
                 />
                 <Text
                   className={`flex-1 font-poppins-medium ${
-                    selectedId === OTHER_ID ? "text-primary-600" : "text-primary-500"
+                    selectedId === OTHER_ID
+                      ? "text-primary-600"
+                      : "text-primary-500"
                   }`}
                 >
                   Outro

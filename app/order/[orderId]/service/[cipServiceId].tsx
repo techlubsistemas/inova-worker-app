@@ -1,10 +1,10 @@
+import { Text } from "@/components/PoppinsText";
 import { ServiceStatusBadge } from "@/components/ServiceStatusBadge";
 import { ToolsAndMaterialsSection } from "@/components/ToolsAndMaterialsSection";
-import { Text } from "@/components/PoppinsText";
 import { useWorkOrders } from "@/hooks/useWorkOrders";
 import type { CipServiceInWorkOrder } from "@/types/workOrder";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeft, AlertTriangle } from "lucide-react-native";
+import { AlertTriangle, ArrowLeft } from "lucide-react-native";
 import { useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
@@ -39,8 +39,8 @@ function formatDateTime(iso: string | null | undefined): string {
 }
 
 export default function WorkOrderServiceDetailScreen() {
-  const { id: workOrderId, cipServiceId } = useLocalSearchParams<{
-    id: string;
+  const { orderId, cipServiceId } = useLocalSearchParams<{
+    orderId: string;
     cipServiceId: string;
   }>();
   const router = useRouter();
@@ -49,18 +49,20 @@ export default function WorkOrderServiceDetailScreen() {
   useFocusEffect(
     useCallback(() => {
       refetch();
-    }, [refetch])
+    }, [refetch]),
   );
 
   const workOrder = useMemo(
-    () => workOrders.find((wo) => wo.id === workOrderId),
-    [workOrders, workOrderId]
+    () => workOrders.find((wo) => wo.id === orderId),
+    [workOrders, orderId],
   );
   const service = useMemo(
     () =>
       workOrder?.cipServices?.find((s) => s.id === cipServiceId) ??
-      (workOrder?.cipService?.id === cipServiceId ? workOrder.cipService : null),
-    [workOrder, cipServiceId]
+      (workOrder?.cipService?.id === cipServiceId
+        ? workOrder.cipService
+        : null),
+    [workOrder, cipServiceId],
   );
 
   const serviceStatus = service?.status ?? "pending";
@@ -80,7 +82,15 @@ export default function WorkOrderServiceDetailScreen() {
   if (error && !workOrder) {
     return (
       <View className="flex-1 bg-white p-4">
-        <TouchableOpacity onPress={() => router.back()} className="py-2">
+        <TouchableOpacity
+          onPress={() =>
+            router.replace({
+              pathname: "/order/[orderId]",
+              params: { orderId: orderId! },
+            })
+          }
+          className="py-2"
+        >
           <ArrowLeft color="#182D53" size={24} />
         </TouchableOpacity>
         <Text className="text-red-600 mt-4">{error}</Text>
@@ -97,7 +107,15 @@ export default function WorkOrderServiceDetailScreen() {
   if (!workOrder || !service) {
     return (
       <View className="flex-1 bg-white p-4">
-        <TouchableOpacity onPress={() => router.back()} className="py-2">
+        <TouchableOpacity
+          onPress={() =>
+            router.replace({
+              pathname: "/order/[orderId]",
+              params: { orderId: orderId! },
+            })
+          }
+          className="py-2"
+        >
           <ArrowLeft color="#182D53" size={24} />
         </TouchableOpacity>
         <Text className="text-secondary-500 mt-4">
@@ -113,15 +131,22 @@ export default function WorkOrderServiceDetailScreen() {
     service.cip?.subset?.set?.equipment?.tag ??
     "—";
   const local = getLocal(service);
-  const cancellationText =
-    isCancelled
-      ? service.cancellationReasonName || service.cancellationReason || null
-      : null;
+  const cancellationText = isCancelled
+    ? service.cancellationReasonName || service.cancellationReason || null
+    : null;
 
   return (
     <View className="flex-1 bg-white">
       <View className="px-4 pt-4 pb-2 border-b border-gray-200">
-        <TouchableOpacity onPress={() => router.back()} className="py-2 self-start">
+        <TouchableOpacity
+          onPress={() =>
+            router.replace({
+              pathname: "/order/[orderId]",
+              params: { orderId: orderId! },
+            })
+          }
+          className="py-2 self-start"
+        >
           <ArrowLeft color="#182D53" size={24} />
         </TouchableOpacity>
         <Text className="text-primary-500 font-poppins-bold text-xl mt-2">
@@ -160,7 +185,6 @@ export default function WorkOrderServiceDetailScreen() {
             )}
           </View>
 
-          {/* Mostrar motivo do problema se cancelado */}
           {isCancelled && cancellationText && (
             <View className="border-b border-gray-200 pb-4">
               <Text className="text-secondary-400 text-xs font-poppins-bold uppercase">
@@ -177,14 +201,14 @@ export default function WorkOrderServiceDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Apenas botão de relatar problema, se ainda não foi relatado */}
       {canReportProblem && (
         <View className="p-4 border-t border-gray-200">
           <TouchableOpacity
             onPress={() =>
               router.push({
-                pathname: "/work-order/[id]/service/[cipServiceId]/report-issue",
-                params: { id: workOrderId!, cipServiceId: cipServiceId! },
+                pathname:
+                  "/order/[orderId]/service/[cipServiceId]/report-issue",
+                params: { orderId: orderId!, cipServiceId: cipServiceId! },
               })
             }
             className="bg-red-500 rounded-full py-4 items-center justify-center flex-row gap-2"

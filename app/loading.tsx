@@ -27,7 +27,7 @@ export default function Loading() {
         className="w-[60%] flex self-center h-1/2"
       >
         <Image
-          source={require("../assets/images/logos/fullLogoOrange.png")}
+          source={require("../assets/images/logos/logo-white-vertical.png")}
           resizeMode="contain"
           className="w-full h-full"
         />

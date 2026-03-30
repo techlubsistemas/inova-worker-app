@@ -69,6 +69,10 @@ export default function RootLayout() {
         >
           <Stack>
             <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="first-access"
+              options={{ headerShown: false }}
+            />
 
             <Stack.Screen name="home" options={{ headerShown: false }} />
             <Stack.Screen name="routes" options={{ headerShown: false }} />
@@ -90,23 +94,15 @@ export default function RootLayout() {
               options={{ headerShown: false }}
             />
             <Stack.Screen
-              name="work-order/[id]"
+              name="order/[orderId]/complete"
               options={{ headerShown: false }}
             />
             <Stack.Screen
-              name="work-order/[id]/complete"
+              name="order/[orderId]/service/[cipServiceId]"
               options={{ headerShown: false }}
             />
             <Stack.Screen
-              name="work-order/[id]/report-issue"
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="work-order/[id]/service/[cipServiceId]"
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="work-order/[id]/service/[cipServiceId]/report-issue"
+              name="order/[orderId]/service/[cipServiceId]/report-issue"
               options={{ headerShown: false }}
             />
             <Stack.Screen

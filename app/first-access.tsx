@@ -1,6 +1,7 @@
 import { LoginHeader } from "@/components/headers/loginHeader";
 import { Text } from "@/components/PoppinsText";
 import { useAuth } from "@/context/AuthContext";
+import { applyCpfMask } from "@/utils/cpfMask";
 import { useRouter } from "expo-router";
 import { Check, Eye, EyeOff, Lock, User } from "lucide-react-native";
 import { useState } from "react";
@@ -32,7 +33,7 @@ export default function FirstAccessScreen() {
         return;
       }
 
-      await firstAccess(cpf, password, confirmPassword);
+      await firstAccess(cpf.replace(/\D/g, ""), password, confirmPassword);
 
       Alert.alert(
         "Sucesso",
@@ -72,7 +73,8 @@ export default function FirstAccessScreen() {
                 autoCapitalize="none"
                 keyboardType="numeric"
                 value={cpf}
-                onChangeText={setCpf}
+                onChangeText={(text) => setCpf(applyCpfMask(text))}
+                maxLength={14}
               />
             </View>
           </View>

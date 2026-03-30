@@ -12,7 +12,7 @@ export function UserHeader() {
       <View className="flex flex-col gap-2 px-4">
         <View className="flex flex-row w-full h-20 justify-between items-center">
           <Image
-            source={require("../../assets/images/logos/logoTextWhite.png")}
+            source={require("../../assets/images/logos/logo-white.png")}
             resizeMode="contain"
             className="w-1/3 "
           />

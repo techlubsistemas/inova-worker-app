@@ -11,15 +11,15 @@ import {
 } from "react-native";
 
 export default function WorkOrderCompleteScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { orderId } = useLocalSearchParams<{ orderId: string }>();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
 
   async function handleComplete() {
-    if (!id) return;
+    if (!orderId) return;
     setSubmitting(true);
     try {
-      await updateWorkOrderStatus(id, {
+      await updateWorkOrderStatus(orderId, {
         status: "completed",
         completedAt: new Date().toISOString(),
       });
@@ -38,7 +38,7 @@ export default function WorkOrderCompleteScreen() {
   return (
     <View className="flex-1 bg-white p-4">
       <TouchableOpacity
-        onPress={() => router.back()}
+        onPress={() => router.replace({ pathname: "/order/[orderId]", params: { orderId: orderId! } })}
         className="py-2 self-start"
       >
         <ArrowLeft color="#182D53" size={24} />

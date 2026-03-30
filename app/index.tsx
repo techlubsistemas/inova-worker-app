@@ -1,6 +1,7 @@
 import { LoginHeader } from "@/components/headers/loginHeader";
 import { Text } from "@/components/PoppinsText";
 import { useAuth } from "@/context/AuthContext";
+import { applyCpfMask } from "@/utils/cpfMask";
 import { useRouter } from "expo-router";
 import { Eye, EyeOff, Lock, User } from "lucide-react-native";
 import { useEffect, useState } from "react";
@@ -33,7 +34,7 @@ export default function HomeScreen() {
         Alert.alert("Erro", "Preencha todos os campos");
         return;
       }
-      await signIn(cpf, password);
+      await signIn(cpf.replace(/\D/g, ""), password);
     } catch (error: any) {
       Alert.alert("Erro no login", error.message);
     }
@@ -57,7 +58,7 @@ export default function HomeScreen() {
         <View className="flex flex-col gap-8 items-start w-full">
           <View className="w-full flex flex-wrap flex-row items-center justify-center">
             <Text className="text-primary-500 text-3xl font-poppins-semi-bold">
-              Entrar no InovAi
+              Entrar no TechLub
             </Text>
           </View>
 
@@ -72,7 +73,8 @@ export default function HomeScreen() {
                 autoCapitalize="none"
                 keyboardType="numeric"
                 value={cpf}
-                onChangeText={setCpf}
+                onChangeText={(text) => setCpf(applyCpfMask(text))}
+                maxLength={14}
               />
             </View>
           </View>

@@ -31,7 +31,7 @@ export function InovaUniversity({
   return (
     <View className="w-full px-5 flex flex-col gap-4 mt-2">
       <Text className="text-primary-500 text-2xl font-poppins-semi-bold">
-        UNIVERSIDADE INOVA
+        UNIVERSIDADE TECHLUB
       </Text>
       <View className="flex flex-col gap-4 pb-6">
         {tutorials.map((tutorial) => (

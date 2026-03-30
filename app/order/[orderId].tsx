@@ -1,11 +1,21 @@
-import { ServiceStatusBadge } from "@/components/ServiceStatusBadge";
 import { Text } from "@/components/PoppinsText";
+import { ServiceStatusBadge } from "@/components/ServiceStatusBadge";
 import { orderKey, useStartedOrders } from "@/context/StartedOrdersContext";
 import { useWorkOrders } from "@/hooks/useWorkOrders";
-import { updateWorkOrderStatus, pauseWorkOrder, resumeWorkOrder } from "@/services/workOrder";
-import type { CipServiceInWorkOrder, WorkOrderApi } from "@/types/workOrder";
+import {
+  pauseWorkOrder,
+  resumeWorkOrder,
+  updateWorkOrderStatus,
+} from "@/services/workOrder";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeft, CheckCircle, Home, ListTodo, Pause, Play } from "lucide-react-native";
+import {
+  ArrowLeft,
+  CheckCircle,
+  Home,
+  ListTodo,
+  Pause,
+  Play,
+} from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -33,13 +43,13 @@ export default function OrderDetailScreen() {
   useFocusEffect(
     useCallback(() => {
       refetch();
-    }, [refetch])
+    }, [refetch]),
   );
 
   const key = orderId ? orderKey("single", orderId) : "";
   const workOrder = useMemo(
     () => workOrders.find((wo) => wo.id === orderId),
-    [workOrders, orderId]
+    [workOrders, orderId],
   );
   const servicesList = useMemo(
     () =>
@@ -48,7 +58,7 @@ export default function OrderDetailScreen() {
         : workOrder?.cipService
           ? [workOrder.cipService]
           : [],
-    [workOrder]
+    [workOrder],
   );
   const isRouteOrder = servicesList.length > 1 && !!workOrder?.route;
   const started = key ? isOrderStarted(key) : false;
@@ -121,7 +131,7 @@ export default function OrderDetailScreen() {
   if (!orderId) {
     return (
       <View className="flex-1 bg-white p-4">
-        <TouchableOpacity onPress={() => router.back()} className="py-2">
+        <TouchableOpacity onPress={() => router.replace("/home")} className="py-2">
           <ArrowLeft color="#182D53" size={24} />
         </TouchableOpacity>
         <Text className="text-secondary-500 mt-4">Ordem não informada.</Text>
@@ -132,7 +142,7 @@ export default function OrderDetailScreen() {
   if (!workOrder && !loading) {
     return (
       <View className="flex-1 bg-white p-4">
-        <TouchableOpacity onPress={() => router.back()} className="py-2">
+        <TouchableOpacity onPress={() => router.replace("/home")} className="py-2">
           <ArrowLeft color="#182D53" size={24} />
         </TouchableOpacity>
         <Text className="text-secondary-500 mt-4">Ordem não encontrada.</Text>
@@ -147,7 +157,9 @@ export default function OrderDetailScreen() {
   const serviceCountLabel =
     servicesList.length === 1 ? "1 serviço" : `${servicesList.length} serviços`;
 
-  const executionTimeText = formatExecutionTime(workOrder?.totalExecutionTimeMinutes);
+  const executionTimeText = formatExecutionTime(
+    workOrder?.totalExecutionTimeMinutes,
+  );
 
   const canInteract = started || allFinished || isPaused;
 
@@ -155,18 +167,18 @@ export default function OrderDetailScreen() {
     <View className="flex-1 bg-white">
       <View className="px-4 pt-4 pb-2 border-b border-gray-200">
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => router.replace("/home")}
           className="py-2 self-start"
         >
           <ArrowLeft color="#182D53" size={24} />
         </TouchableOpacity>
         <View className="flex-row items-center gap-2 mt-2">
           <View className="bg-secondary-500 px-2 py-0.5 rounded">
-            <Text className="text-white text-xs font-poppins-bold">Ordem de serviço</Text>
+            <Text className="text-white text-xs font-poppins-bold">
+              Ordem de serviço
+            </Text>
           </View>
-          {workOrder && (
-            <ServiceStatusBadge status={workOrder.status} />
-          )}
+          {workOrder && <ServiceStatusBadge status={workOrder.status} />}
         </View>
         <Text className="text-primary-500 font-poppins-bold text-xl mt-2">
           {orderTitle}
@@ -182,7 +194,8 @@ export default function OrderDetailScreen() {
       <ScrollView className="flex-1 p-4" showsVerticalScrollIndicator={false}>
         {canInteract && !allFinished && (
           <Text className="text-secondary-500 font-poppins-medium mb-2">
-            Serviços sem interação serão considerados concluídos. Toque em um serviço apenas para relatar um problema.
+            Serviços sem interação serão considerados concluídos. Toque em um
+            serviço apenas para relatar um problema.
           </Text>
         )}
 
@@ -197,7 +210,8 @@ export default function OrderDetailScreen() {
             Serviços desta ordem
           </Text>
           {servicesList.map((s, idx) => {
-            const isClickable = canInteract && (isRouteOrder || servicesList.length === 1);
+            const isClickable =
+              canInteract && (isRouteOrder || servicesList.length === 1);
             const cancellationText =
               s.status === "cancelled" &&
               (s.cancellationReasonName || s.cancellationReason)
@@ -210,8 +224,8 @@ export default function OrderDetailScreen() {
                   key={s.id ?? idx}
                   onPress={() =>
                     router.push({
-                      pathname: "/work-order/[id]/service/[cipServiceId]",
-                      params: { id: workOrder!.id, cipServiceId: s.id },
+                      pathname: "/order/[orderId]/service/[cipServiceId]",
+                      params: { orderId: workOrder!.id, cipServiceId: s.id },
                     })
                   }
                   className="rounded-lg border border-gray-200 bg-gray-50 p-3 flex-row items-center justify-between"
@@ -345,8 +359,8 @@ export default function OrderDetailScreen() {
             <TouchableOpacity
               onPress={() =>
                 router.push({
-                  pathname: "/work-order/[id]/complete",
-                  params: { id: workOrder!.id },
+                  pathname: "/order/[orderId]/complete",
+                  params: { orderId: workOrder!.id },
                 })
               }
               className="bg-green-600 rounded-full py-4 items-center justify-center flex-row gap-2"
