@@ -49,7 +49,7 @@ export default function WorkOrderCompleteScreen() {
           Concluir ordem de serviço
         </Text>
         <Text className="text-secondary-500 text-center mt-2">
-          Ao confirmar, todos os serviços que não tiveram problema relatado
+          Ao confirmar, todos os serviços que não tiveram anomalia relatada
           serão automaticamente marcados como concluídos com sucesso.
         </Text>
 

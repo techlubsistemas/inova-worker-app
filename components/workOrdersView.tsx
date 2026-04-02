@@ -9,8 +9,8 @@ import {
   View,
 } from "react-native";
 import { Text } from "./PoppinsText";
-import { WorkOrderCard } from "./workOrderCard";
 import { RouteCard } from "./routeCard";
+import { WorkOrderCard } from "./workOrderCard";
 
 type TabIndex = 0 | 1 | 2;
 

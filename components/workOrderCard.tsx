@@ -1,8 +1,8 @@
+import type { WorkOrderApi, WorkOrderStatus } from "@/types/workOrder";
 import { cn } from "@/utils/cn";
 import { Calendar, MapPin, Pause } from "lucide-react-native";
 import { TouchableOpacity, View } from "react-native";
 import { Text } from "./PoppinsText";
-import type { WorkOrderApi, WorkOrderStatus } from "@/types/workOrder";
 
 function getStatusLabel(status: WorkOrderStatus): string {
   switch (status) {
@@ -90,12 +90,10 @@ export function WorkOrderCard({ data, onPress }: WorkOrderCardProps) {
   // Hierarquia: 1) Codigo WO  2) Nome rota/servico  3) Detalhes
   const woCode = formatWoCode(data.code);
   const title = isRouteWO
-    ? (data.route!.name || data.route!.code || "Rota")
+    ? data.route!.name || data.route!.code || "Rota"
     : (firstService?.serviceModel?.name ?? "Servico");
-  const equipmentName =
-    firstService?.cip?.subset?.set?.equipment?.name ?? "";
-  const equipmentTag =
-    firstService?.cip?.subset?.set?.equipment?.tag ?? "";
+  const equipmentName = firstService?.cip?.subset?.set?.equipment?.name ?? "";
+  const equipmentTag = firstService?.cip?.subset?.set?.equipment?.tag ?? "";
   const local = getLocal(data);
   const date = formatDate(data.scheduledAt);
   const serviceCount = data.cipServices?.length ?? (data.cipService ? 1 : 0);
@@ -121,9 +119,7 @@ export function WorkOrderCard({ data, onPress }: WorkOrderCardProps) {
                 statusStyle.bg,
               )}
             >
-              {data.status === "paused" && (
-                <Pause color="#a16207" size={10} />
-              )}
+              {data.status === "paused" && <Pause color="#a16207" size={10} />}
               <Text
                 className={cn(
                   "text-[10px] font-poppins-bold",

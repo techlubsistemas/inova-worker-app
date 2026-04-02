@@ -131,7 +131,10 @@ export default function OrderDetailScreen() {
   if (!orderId) {
     return (
       <View className="flex-1 bg-white p-4">
-        <TouchableOpacity onPress={() => router.replace("/home")} className="py-2">
+        <TouchableOpacity
+          onPress={() => router.replace("/home")}
+          className="py-2"
+        >
           <ArrowLeft color="#182D53" size={24} />
         </TouchableOpacity>
         <Text className="text-secondary-500 mt-4">Ordem não informada.</Text>
@@ -142,7 +145,10 @@ export default function OrderDetailScreen() {
   if (!workOrder && !loading) {
     return (
       <View className="flex-1 bg-white p-4">
-        <TouchableOpacity onPress={() => router.replace("/home")} className="py-2">
+        <TouchableOpacity
+          onPress={() => router.replace("/home")}
+          className="py-2"
+        >
           <ArrowLeft color="#182D53" size={24} />
         </TouchableOpacity>
         <Text className="text-secondary-500 mt-4">Ordem não encontrada.</Text>
@@ -175,7 +181,7 @@ export default function OrderDetailScreen() {
         <View className="flex-row items-center gap-2 mt-2">
           <View className="bg-secondary-500 px-2 py-0.5 rounded">
             <Text className="text-white text-xs font-poppins-bold">
-              Ordem de serviço
+              {workOrder?.code ?? "ORDEM DE SERVIÇO"}
             </Text>
           </View>
           {workOrder && <ServiceStatusBadge status={workOrder.status} />}
@@ -195,7 +201,7 @@ export default function OrderDetailScreen() {
         {canInteract && !allFinished && (
           <Text className="text-secondary-500 font-poppins-medium mb-2">
             Serviços sem interação serão considerados concluídos. Toque em um
-            serviço apenas para relatar um problema.
+            serviço apenas para relatar uma anomalia.
           </Text>
         )}
 
@@ -241,7 +247,7 @@ export default function OrderDetailScreen() {
                     </Text>
                     {cancellationText && (
                       <Text className="text-red-500 text-xs mt-1">
-                        Problema: {cancellationText}
+                        Anomalia: {cancellationText}
                       </Text>
                     )}
                   </View>
@@ -268,7 +274,7 @@ export default function OrderDetailScreen() {
                   </Text>
                   {cancellationText && (
                     <Text className="text-red-500 text-xs mt-1">
-                      Problema: {cancellationText}
+                      Anomalia: {cancellationText}
                     </Text>
                   )}
                 </View>

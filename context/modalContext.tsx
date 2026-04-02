@@ -5,7 +5,6 @@ import React, {
   useContext,
   useState,
 } from "react";
-import type { Tutorial } from "@/types/tutorial";
 
 // Interface para tipar os dados do item modal
 interface ItemModalData {
@@ -25,9 +24,6 @@ interface ModalContextType {
   closeItemModal: () => void;
   itemModalData: ItemModalData;
   setItemModalData: Dispatch<SetStateAction<ItemModalData>>;
-  selectedTutorial: Tutorial | null;
-  openTutorialModal: (tutorial: Tutorial) => void;
-  closeTutorialModal: () => void;
 }
 
 // Valor padrão para o contexto
@@ -40,9 +36,6 @@ const ModalContext = createContext<ModalContextType>({
   closeItemModal: () => {},
   itemModalData: { id: 0, name: "", quantity: 0, image: "" },
   setItemModalData: () => {},
-  selectedTutorial: null,
-  openTutorialModal: () => {},
-  closeTutorialModal: () => {},
 });
 
 export const ModalProvider = ({ children }: { children: React.ReactNode }) => {
@@ -54,14 +47,11 @@ export const ModalProvider = ({ children }: { children: React.ReactNode }) => {
     quantity: 0,
     image: "",
   });
-  const [selectedTutorial, setSelectedTutorial] = useState<Tutorial | null>(null);
 
   const openLessonModal = () => setLessonModalOpen(true);
   const closeLessonModal = () => setLessonModalOpen(false);
   const openItemModal = () => setItemModalOpen(true);
   const closeItemModal = () => setItemModalOpen(false);
-  const openTutorialModal = (tutorial: Tutorial) => setSelectedTutorial(tutorial);
-  const closeTutorialModal = () => setSelectedTutorial(null);
 
   return (
     <ModalContext.Provider
@@ -74,9 +64,6 @@ export const ModalProvider = ({ children }: { children: React.ReactNode }) => {
         closeItemModal,
         itemModalData,
         setItemModalData,
-        selectedTutorial,
-        openTutorialModal,
-        closeTutorialModal,
       }}
     >
       {children}

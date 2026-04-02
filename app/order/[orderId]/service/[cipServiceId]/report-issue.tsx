@@ -81,7 +81,7 @@ export default function WorkOrderServiceReportIssueScreen() {
     if (selectedId === null) {
       Alert.alert(
         "Campo obrigatório",
-        'Selecione um motivo ou "Outro" e descreva o problema.',
+        'Selecione um motivo ou "Outro" e descreva a anomalia.',
       );
       return;
     }
@@ -90,7 +90,7 @@ export default function WorkOrderServiceReportIssueScreen() {
       if (!trimmed) {
         Alert.alert(
           "Campo obrigatório",
-          'Descreva o problema quando escolher "Outro".',
+          'Descreva a anomalia quando escolher "Outro".',
         );
         return;
       }
@@ -138,7 +138,7 @@ export default function WorkOrderServiceReportIssueScreen() {
         </TouchableOpacity>
 
         <Text className="text-primary-500 font-poppins-bold text-xl mt-4">
-          Relatar problema
+          Relatar anomalia
         </Text>
         <Text className="text-secondary-500 mt-2">
           Selecione o motivo que impediu a execução deste serviço ou escolha
@@ -226,7 +226,7 @@ export default function WorkOrderServiceReportIssueScreen() {
           {selectedId === OTHER_ID && (
             <View className="mt-4">
               <Text className="text-secondary-400 text-sm font-poppins-bold mb-2">
-                Descrição do problema *
+                Descrição da anomalia *
               </Text>
               <TextInput
                 value={otherText}

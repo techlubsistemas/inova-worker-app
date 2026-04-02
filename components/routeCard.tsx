@@ -1,8 +1,8 @@
+import type { RouteGroup, WorkOrderStatus } from "@/types/workOrder";
 import { cn } from "@/utils/cn";
 import { Calendar, Route } from "lucide-react-native";
 import { TouchableOpacity, View } from "react-native";
 import { Text } from "./PoppinsText";
-import type { RouteGroup, WorkOrderStatus } from "@/types/workOrder";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "";
@@ -107,12 +107,7 @@ export function RouteCard({ data, onPress }: RouteCardProps) {
                 </Text>
               </View>
             )}
-            <View
-              className={cn(
-                "px-2.5 py-1 rounded-full",
-                statusStyle.bg,
-              )}
-            >
+            <View className={cn("px-2.5 py-1 rounded-full", statusStyle.bg)}>
               <Text
                 className={cn(
                   "text-[10px] font-poppins-bold",

@@ -6,9 +6,29 @@ export type WorkOrderStatus =
   | "completed"
   | "cancelled";
 
+export interface WorkInstructionAttachment {
+  id: string;
+  type: "video" | "file";
+  url: string;
+  originalName?: string | null;
+}
+
+export interface WorkInstructionInService {
+  id: string;
+  title: string;
+  description?: string | null;
+  attachments?: WorkInstructionAttachment[];
+}
+
 export interface CipServiceInWorkOrder {
   id: string;
-  serviceModel?: { id: string; name: string } | null;
+  serviceModel?: {
+    id: string;
+    name: string;
+    workInstructions?: Array<{
+      workInstruction: WorkInstructionInService;
+    }>;
+  } | null;
   team?: { id: string; name: string } | null;
   toolkit?: { id: string; name: string; description?: string | null } | null;
   cip?: {

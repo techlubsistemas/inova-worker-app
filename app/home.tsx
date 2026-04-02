@@ -1,11 +1,6 @@
 import { AiBanner } from "@/components/aiBanner";
 import { UserHeader } from "@/components/headers/userHeader";
-import { InovaUniversity } from "@/components/inovaUniversity";
-import { LessonModal } from "@/components/modals/lessonModal";
-import { TutorialModal } from "@/components/modals/tutorialModal";
 import { WorkOrdersView } from "@/components/workOrdersView";
-import { useModal } from "@/context/modalContext";
-import { useTutorials } from "@/hooks/useTutorials";
 import { useWorkOrders } from "@/hooks/useWorkOrders";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback } from "react";
@@ -13,23 +8,16 @@ import { RefreshControl, ScrollView, View } from "react-native";
 
 export default function Home() {
   const router = useRouter();
-  const { isLessonModalOpen, openTutorialModal } = useModal();
   const { workOrders, loading, error, refetch } = useWorkOrders();
-  const {
-    tutorials,
-    loading: tutorialsLoading,
-    refetch: tutorialsRefetch,
-  } = useTutorials();
 
   useFocusEffect(
     useCallback(() => {
       refetch();
-      tutorialsRefetch();
-    }, [refetch, tutorialsRefetch]),
+    }, [refetch]),
   );
 
   const handleRefresh = async () => {
-    await Promise.all([refetch(), tutorialsRefetch()]);
+    await Promise.all([refetch()]);
   };
 
   const handleNavigateToOrder = useCallback(
@@ -52,7 +40,7 @@ export default function Home() {
         className="bg-white flex flex-col"
         refreshControl={
           <RefreshControl
-            refreshing={loading || tutorialsLoading}
+            refreshing={loading}
             onRefresh={handleRefresh}
             colors={["#ED6842"]}
             tintColor="#ED6842"
@@ -73,15 +61,8 @@ export default function Home() {
             onNavigateToOrder={handleNavigateToOrder}
             onNavigateToRoute={handleNavigateToRoute}
           />
-          <InovaUniversity
-            tutorials={tutorials}
-            loading={tutorialsLoading}
-            onTutorialPress={openTutorialModal}
-          />
         </View>
       </ScrollView>
-      {isLessonModalOpen && <LessonModal />}
-      <TutorialModal />
     </View>
   );
 }

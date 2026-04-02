@@ -2,12 +2,25 @@ import { Text } from "@/components/PoppinsText";
 import { ServiceStatusBadge } from "@/components/ServiceStatusBadge";
 import { ToolsAndMaterialsSection } from "@/components/ToolsAndMaterialsSection";
 import { useWorkOrders } from "@/hooks/useWorkOrders";
-import type { CipServiceInWorkOrder } from "@/types/workOrder";
+import { resolveWorkInstructionAttachmentUrl } from "@/lib/resolveAttachmentUrl";
+import type {
+  CipServiceInWorkOrder,
+  WorkInstructionInService,
+} from "@/types/workOrder";
+import * as WebBrowser from "expo-web-browser";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { AlertTriangle, ArrowLeft } from "lucide-react-native";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  BookOpen,
+  FileText,
+  Video,
+} from "lucide-react-native";
 import { useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
+  Alert,
+  Linking,
   ScrollView,
   TouchableOpacity,
   View,
@@ -188,7 +201,7 @@ export default function WorkOrderServiceDetailScreen() {
           {isCancelled && cancellationText && (
             <View className="border-b border-gray-200 pb-4">
               <Text className="text-secondary-400 text-xs font-poppins-bold uppercase">
-                Problema relatado
+                Anomalia relatada
               </Text>
               <View className="flex-row items-start gap-2 mt-1">
                 <AlertTriangle color="#ef4444" size={16} />
@@ -198,6 +211,8 @@ export default function WorkOrderServiceDetailScreen() {
           )}
 
           <ToolsAndMaterialsSection servicesList={[service]} />
+
+          <WorkInstructionsSection service={service} />
         </View>
       </ScrollView>
 
@@ -215,11 +230,102 @@ export default function WorkOrderServiceDetailScreen() {
           >
             <AlertTriangle color="white" size={20} />
             <Text className="text-white font-poppins-bold text-lg">
-              RELATAR PROBLEMA
+              RELATAR ANOMALIA
             </Text>
           </TouchableOpacity>
         </View>
       )}
+    </View>
+  );
+}
+
+async function openWorkInstructionAttachment(
+  rawUrl: string,
+  type: "video" | "file",
+) {
+  const url = resolveWorkInstructionAttachmentUrl(rawUrl);
+  if (!/^https?:\/\//i.test(url)) {
+    Alert.alert(
+      "Não foi possível abrir",
+      "Endereço do arquivo inválido. Tente atualizar os dados puxando a tela para baixo.",
+    );
+    return;
+  }
+  try {
+    if (type === "file") {
+      await WebBrowser.openBrowserAsync(url);
+    } else {
+      await Linking.openURL(url);
+    }
+  } catch {
+    Alert.alert("Erro", "Não foi possível abrir o anexo.");
+  }
+}
+
+function WorkInstructionsSection({
+  service,
+}: {
+  service: CipServiceInWorkOrder;
+}) {
+  const instructions: WorkInstructionInService[] = useMemo(() => {
+    return (
+      service.serviceModel?.workInstructions?.map(
+        (link) => link.workInstruction
+      ) ?? []
+    );
+  }, [service]);
+
+  if (instructions.length === 0) return null;
+
+  return (
+    <View className="border-b border-gray-200 pb-4">
+      <View className="flex-row items-center gap-2 mb-2">
+        <BookOpen size={16} color="#6B7280" />
+        <Text className="text-secondary-400 text-xs font-poppins-bold uppercase">
+          Instruções de Trabalho
+        </Text>
+      </View>
+      {instructions.map((wi) => (
+        <View
+          key={wi.id}
+          className="bg-gray-50 rounded-xl p-3 mb-2"
+        >
+          <Text className="text-primary-500 font-poppins-bold text-sm">
+            {wi.title}
+          </Text>
+          {wi.description ? (
+            <Text className="text-secondary-500 text-xs mt-1">
+              {wi.description}
+            </Text>
+          ) : null}
+          {wi.attachments && wi.attachments.length > 0 && (
+            <View className="mt-2 gap-1">
+              {wi.attachments.map((att) => (
+                <TouchableOpacity
+                  key={att.id}
+                  className="flex-row items-center gap-2 bg-white rounded-lg px-3 py-2 border border-gray-200"
+                  onPress={() => {
+                    if (att.url)
+                      void openWorkInstructionAttachment(att.url, att.type);
+                  }}
+                >
+                  {att.type === "video" ? (
+                    <Video size={16} color="#ED6842" />
+                  ) : (
+                    <FileText size={16} color="#ED6842" />
+                  )}
+                  <Text
+                    className="text-primary-500 text-xs flex-1"
+                    numberOfLines={1}
+                  >
+                    {att.originalName || att.url}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+      ))}
     </View>
   );
 }
