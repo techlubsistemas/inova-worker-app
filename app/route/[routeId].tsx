@@ -1,6 +1,6 @@
 import { Text } from "@/components/PoppinsText";
 import { useStartedOrders } from "@/context/StartedOrdersContext";
-import { useWorkOrders } from "@/hooks/useWorkOrders";
+import { useWorkOrders } from "@/context/WorkOrdersContext";
 import type { WorkOrderApi, CipServiceInWorkOrder } from "@/types/workOrder";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, CheckCircle, ListTodo } from "lucide-react-native";
@@ -69,13 +69,13 @@ function collectServicesFromWOs(routeWOs: WorkOrderApi[]): CipServiceInWorkOrder
 export default function RouteDetailScreen() {
   const { routeId } = useLocalSearchParams<{ routeId: string }>();
   const router = useRouter();
-  const { workOrders, loading, refetch } = useWorkOrders();
+  const { workOrders, loading, refetchIfStale } = useWorkOrders();
   const { isRouteStarted, startRoute, finishRoute } = useStartedOrders();
 
   useFocusEffect(
     useCallback(() => {
-      refetch();
-    }, [refetch])
+      refetchIfStale();
+    }, [refetchIfStale])
   );
 
   const routeWOs = useMemo(() => {

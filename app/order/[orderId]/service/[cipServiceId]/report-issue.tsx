@@ -40,8 +40,14 @@ function getErrorMessage(err: unknown): string {
 }
 
 export default function WorkOrderServiceReportIssueScreen() {
-  const params = useLocalSearchParams<{ orderId: string; cipServiceId: string }>();
-  const orderId = useMemo(() => normalizeParam(params.orderId), [params.orderId]);
+  const params = useLocalSearchParams<{
+    orderId: string;
+    cipServiceId: string;
+  }>();
+  const orderId = useMemo(
+    () => normalizeParam(params.orderId),
+    [params.orderId],
+  );
   const cipServiceId = useMemo(
     () => normalizeParam(params.cipServiceId),
     [params.cipServiceId],
@@ -131,7 +137,12 @@ export default function WorkOrderServiceReportIssueScreen() {
     >
       <View className="flex-1 p-4">
         <TouchableOpacity
-          onPress={() => router.replace({ pathname: "/order/[orderId]", params: { orderId } })}
+          onPress={() =>
+            router.replace({
+              pathname: "/order/[orderId]",
+              params: { orderId },
+            })
+          }
           className="py-2 self-start"
         >
           <ArrowLeft color="#182D53" size={24} />

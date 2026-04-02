@@ -1,7 +1,7 @@
 import { Text } from "@/components/PoppinsText";
 import { ServiceStatusBadge } from "@/components/ServiceStatusBadge";
 import { orderKey, useStartedOrders } from "@/context/StartedOrdersContext";
-import { useWorkOrders } from "@/hooks/useWorkOrders";
+import { useWorkOrders } from "@/context/WorkOrdersContext";
 import {
   pauseWorkOrder,
   resumeWorkOrder,
@@ -36,14 +36,14 @@ function formatExecutionTime(minutes: number | undefined): string | null {
 export default function OrderDetailScreen() {
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
   const router = useRouter();
-  const { workOrders, loading, refetch } = useWorkOrders();
+  const { workOrders, loading, refetchIfStale, updateLocal } = useWorkOrders();
   const { isOrderStarted, startOrder, finishOrder } = useStartedOrders();
   const [updating, setUpdating] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
-      refetch();
-    }, [refetch]),
+      refetchIfStale();
+    }, [refetchIfStale]),
   );
 
   const key = orderId ? orderKey("single", orderId) : "";
@@ -72,12 +72,18 @@ export default function OrderDetailScreen() {
     if (!key || !orderId || !workOrder) return;
     setUpdating(true);
     try {
+      const executedAt = new Date().toISOString();
       await updateWorkOrderStatus(orderId, {
         status: "in_progress",
-        executedAt: new Date().toISOString(),
+        executedAt,
       });
       await startOrder(key);
-      await refetch();
+      // Optimistic update — reflect change immediately
+      updateLocal(orderId, (wo) => ({
+        ...wo,
+        status: "in_progress" as const,
+        executedAt,
+      }));
     } catch (err) {
       const msg =
         err && typeof err === "object" && "message" in err
@@ -87,14 +93,17 @@ export default function OrderDetailScreen() {
     } finally {
       setUpdating(false);
     }
-  }, [key, orderId, workOrder, startOrder, refetch]);
+  }, [key, orderId, workOrder, startOrder, updateLocal]);
 
   const handlePause = useCallback(async () => {
     if (!orderId) return;
     setUpdating(true);
     try {
       await pauseWorkOrder(orderId);
-      await refetch();
+      updateLocal(orderId, (wo) => ({
+        ...wo,
+        status: "paused" as const,
+      }));
     } catch (err) {
       const msg =
         err && typeof err === "object" && "message" in err
@@ -104,14 +113,17 @@ export default function OrderDetailScreen() {
     } finally {
       setUpdating(false);
     }
-  }, [orderId, refetch]);
+  }, [orderId, updateLocal]);
 
   const handleResume = useCallback(async () => {
     if (!orderId) return;
     setUpdating(true);
     try {
       await resumeWorkOrder(orderId);
-      await refetch();
+      updateLocal(orderId, (wo) => ({
+        ...wo,
+        status: "in_progress" as const,
+      }));
     } catch (err) {
       const msg =
         err && typeof err === "object" && "message" in err
@@ -121,7 +133,7 @@ export default function OrderDetailScreen() {
     } finally {
       setUpdating(false);
     }
-  }, [orderId, refetch]);
+  }, [orderId, updateLocal]);
 
   const handleGoHome = useCallback(() => {
     if (key) finishOrder(key);

@@ -13,7 +13,7 @@ export interface ProblemReasonsResponse {
 
 export async function fetchProblemReasonsForWorker(): Promise<ProblemReasonsResponse> {
   const { data } = await axios.get<ProblemReasonsResponse>(
-    `${API_URL}/service-problem-reason/worker/me`
+    `${API_URL}/service-problem-reason/worker/me`,
   );
   return data;
 }

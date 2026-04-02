@@ -1,19 +1,20 @@
 import { AiBanner } from "@/components/aiBanner";
 import { UserHeader } from "@/components/headers/userHeader";
 import { WorkOrdersView } from "@/components/workOrdersView";
-import { useWorkOrders } from "@/hooks/useWorkOrders";
+import { useWorkOrders } from "@/context/WorkOrdersContext";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
 
 export default function Home() {
   const router = useRouter();
-  const { workOrders, loading, error, refetch } = useWorkOrders();
+  const { workOrders, loading, error, refetch, refetchIfStale } =
+    useWorkOrders();
 
   useFocusEffect(
     useCallback(() => {
-      refetch();
-    }, [refetch]),
+      refetchIfStale();
+    }, [refetchIfStale]),
   );
 
   const handleRefresh = async () => {

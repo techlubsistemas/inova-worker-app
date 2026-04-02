@@ -1,5 +1,6 @@
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { StartedOrdersProvider } from "@/context/StartedOrdersContext";
+import { WorkOrdersProvider } from "@/context/WorkOrdersContext";
 import { ContextProvider } from "@/context/contextProvider";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import {
@@ -63,6 +64,7 @@ export default function RootLayout() {
     <ContextProvider>
       <AuthProvider>
         <AuthGuard>
+        <WorkOrdersProvider>
         <StartedOrdersProvider>
         <ThemeProvider
           value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
@@ -114,6 +116,7 @@ export default function RootLayout() {
           <StatusBar style="auto" hidden />
         </ThemeProvider>
         </StartedOrdersProvider>
+        </WorkOrdersProvider>
         </AuthGuard>
       </AuthProvider>
     </ContextProvider>

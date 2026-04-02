@@ -1,7 +1,7 @@
 import { Text } from "@/components/PoppinsText";
 import { ServiceStatusBadge } from "@/components/ServiceStatusBadge";
 import { ToolsAndMaterialsSection } from "@/components/ToolsAndMaterialsSection";
-import { useWorkOrders } from "@/hooks/useWorkOrders";
+import { useWorkOrders } from "@/context/WorkOrdersContext";
 import { resolveWorkInstructionAttachmentUrl } from "@/lib/resolveAttachmentUrl";
 import type {
   CipServiceInWorkOrder,
@@ -57,12 +57,12 @@ export default function WorkOrderServiceDetailScreen() {
     cipServiceId: string;
   }>();
   const router = useRouter();
-  const { workOrders, loading, error, refetch } = useWorkOrders();
+  const { workOrders, loading, error, refetch, refetchIfStale } = useWorkOrders();
 
   useFocusEffect(
     useCallback(() => {
-      refetch();
-    }, [refetch]),
+      refetchIfStale();
+    }, [refetchIfStale]),
   );
 
   const workOrder = useMemo(
