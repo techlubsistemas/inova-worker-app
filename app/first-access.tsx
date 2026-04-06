@@ -3,7 +3,7 @@ import { Text } from "@/components/PoppinsText";
 import { useAuth } from "@/context/AuthContext";
 import { applyCpfMask } from "@/utils/cpfMask";
 import { useRouter } from "expo-router";
-import { Check, Eye, EyeOff, Lock, User } from "lucide-react-native";
+import { Check, Eye, EyeOff, Key, Lock, User } from "lucide-react-native";
 import { useState } from "react";
 import {
   Alert,
@@ -17,23 +17,29 @@ import {
 export default function FirstAccessScreen() {
   const [isShowingPassword, setIsShowingPassword] = useState(false);
   const [cpf, setCpf] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [tempPassword, setTempPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const { firstAccess, isLoading } = useAuth();
   const router = useRouter();
 
   async function handleFirstAccess() {
     try {
-      if (!cpf || !password || !confirmPassword) {
+      if (!cpf || !tempPassword || !newPassword || !confirmNewPassword) {
         Alert.alert("Erro", "Preencha todos os campos");
         return;
       }
-      if (password !== confirmPassword) {
+      if (newPassword !== confirmNewPassword) {
         Alert.alert("Erro", "As senhas não coincidem");
         return;
       }
 
-      await firstAccess(cpf.replace(/\D/g, ""), password, confirmPassword);
+      await firstAccess(
+        cpf.replace(/\D/g, ""),
+        tempPassword,
+        newPassword,
+        confirmNewPassword,
+      );
 
       Alert.alert(
         "Sucesso",
@@ -58,7 +64,7 @@ export default function FirstAccessScreen() {
               Primeiro Acesso
             </Text>
             <Text className="text-secondary-400 text-sm font-poppins-regular text-center mt-2">
-              Confirme seu CPF e crie uma senha segura.
+              Informe seu CPF, a senha temporária recebida e crie uma nova senha.
             </Text>
           </View>
 
@@ -80,6 +86,23 @@ export default function FirstAccessScreen() {
           </View>
 
           <View className="flex flex-col gap-1 w-full">
+            <Text className="text-secondary-400 font-poppins-bold">
+              Senha Temporária
+            </Text>
+            <View className="flex flex-row gap-2 w-full items-center border-[#a3a3a3] border-b">
+              <Key color={"#ED6842"} />
+              <TextInput
+                placeholderTextColor={"#a3a3a3"}
+                placeholder="Senha recebida do administrador"
+                className="flex-1 h-12"
+                autoCapitalize="none"
+                value={tempPassword}
+                onChangeText={setTempPassword}
+              />
+            </View>
+          </View>
+
+          <View className="flex flex-col gap-1 w-full">
             <Text className="text-secondary-400  font-poppins-bold">
               Nova Senha
             </Text>
@@ -90,8 +113,8 @@ export default function FirstAccessScreen() {
                 placeholder="Crie uma senha"
                 className="flex-1 h-12"
                 secureTextEntry={!isShowingPassword}
-                value={password}
-                onChangeText={setPassword}
+                value={newPassword}
+                onChangeText={setNewPassword}
               />
               <TouchableOpacity
                 onPress={() => setIsShowingPassword(!isShowingPassword)}
@@ -116,8 +139,8 @@ export default function FirstAccessScreen() {
                 placeholder="Confirme a senha"
                 className="flex-1 h-12"
                 secureTextEntry={!isShowingPassword}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
+                value={confirmNewPassword}
+                onChangeText={setConfirmNewPassword}
               />
             </View>
           </View>

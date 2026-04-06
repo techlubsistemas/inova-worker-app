@@ -20,8 +20,9 @@ interface AuthContextData {
   signOut: () => Promise<void>;
   firstAccess: (
     cpf: string,
-    password: string,
-    confirmPassword: string,
+    tempPassword: string,
+    newPassword: string,
+    confirmNewPassword: string,
   ) => Promise<void>;
 }
 
@@ -111,19 +112,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function firstAccess(
     cpf: string,
-    password: string,
-    confirmPassword: string,
+    tempPassword: string,
+    newPassword: string,
+    confirmNewPassword: string,
   ) {
     try {
       console.log("--- FIRST ACCESS START ---");
       console.log("Sending request to:", `${API_URL}/auth/worker/first-access`);
-      // Warning: Don't log passwords in production. For now keeping it for debug request.
-      console.log("Payload:", { cpf, password, confirmPassword });
 
       const response = await axios.post(`${API_URL}/auth/worker/first-access`, {
         cpf,
-        password,
-        confirmPassword,
+        tempPassword,
+        newPassword,
+        confirmNewPassword,
       });
 
       console.log("Response Status:", response.status);
