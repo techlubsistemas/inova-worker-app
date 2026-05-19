@@ -183,6 +183,50 @@ async function deleteById(id: string): Promise<void> {
   await db.runAsync(`DELETE FROM work_orders WHERE id = ?`, [id]);
 }
 
+/**
+ * Reseta o `_sync_status` para permitir que o próximo pull do servidor
+ * sobrescreva esta WO (usado quando ops do outbox são rejeitadas em
+ * definitivo — o estado local otimista precisa ser revertido pelo pull).
+ */
+async function markForServerRefresh(id: string): Promise<void> {
+  const db = await getDatabase();
+  const now = new Date().toISOString();
+  await db.runAsync(
+    `UPDATE work_orders SET _sync_status = 'server_overwritten', updated_at = ? WHERE id = ?`,
+    [now, id]
+  );
+}
+
+async function deleteByIds(ids: string[]): Promise<number> {
+  if (ids.length === 0) return 0;
+  const db = await getDatabase();
+  const placeholders = ids.map(() => "?").join(", ");
+  const result = await db.runAsync(
+    `DELETE FROM work_orders WHERE id IN (${placeholders})`,
+    ids as never[]
+  );
+  return result.changes;
+}
+
+async function findAllIds(): Promise<string[]> {
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<{ id: string; _sync_status: string }>(
+    `SELECT id, _sync_status FROM work_orders`
+  );
+  return rows.map((r) => r.id);
+}
+
+async function findIdsBySyncStatus(
+  syncStatus: SyncStatus
+): Promise<string[]> {
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<{ id: string }>(
+    `SELECT id FROM work_orders WHERE _sync_status = ?`,
+    [syncStatus]
+  );
+  return rows.map((r) => r.id);
+}
+
 async function deleteAll(): Promise<void> {
   const db = await getDatabase();
   await db.runAsync(`DELETE FROM work_orders`);
@@ -203,6 +247,10 @@ export const workOrdersRepo = {
   upsertFromServer,
   applyLocalMutation,
   deleteById,
+  deleteByIds,
+  findAllIds,
+  findIdsBySyncStatus,
+  markForServerRefresh,
   deleteAll,
   count,
 };

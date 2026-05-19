@@ -10,10 +10,12 @@ import {
   CircleAlert,
   Clock,
   RefreshCw,
+  Trash2,
 } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   TouchableOpacity,
   View,
@@ -60,6 +62,48 @@ export default function SyncScreen() {
       setBusy(false);
     }
   };
+
+  const handleDiscardOp = useCallback(
+    (op: OutboxOp) => {
+      Alert.alert(
+        "Descartar operação?",
+        `Esta ação remove definitivamente a operação ${op.entity}.${op.op_type} do outbox. O estado da OS será atualizado pelo servidor na próxima sincronização.`,
+        [
+          { text: "Cancelar", style: "cancel" },
+          {
+            text: "Descartar",
+            style: "destructive",
+            onPress: async () => {
+              await outboxRepo.deleteById(op.id);
+              await reload();
+            },
+          },
+        ],
+      );
+    },
+    [reload],
+  );
+
+  const deadOps = ops.filter((o) => o.status === "dead");
+
+  const handleDiscardAllDead = useCallback(() => {
+    if (deadOps.length === 0) return;
+    Alert.alert(
+      "Descartar todas as operações com falha?",
+      `Isto remove ${deadOps.length} operação(ões) do outbox.`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Descartar tudo",
+          style: "destructive",
+          onPress: async () => {
+            await outboxRepo.deleteByStatus(["dead"]);
+            await reload();
+          },
+        },
+      ],
+    );
+  }, [deadOps.length, reload]);
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -132,15 +176,30 @@ export default function SyncScreen() {
 
         {/* Outbox list */}
         <View className="px-4 pb-8">
-          <Text className="text-sm font-poppins-semibold text-gray-700 mb-2">
-            Operações no outbox ({ops.length})
-          </Text>
+          <View className="flex-row items-center justify-between mb-2">
+            <Text className="text-sm font-poppins-semibold text-gray-700">
+              Operações no outbox ({ops.length})
+            </Text>
+            {deadOps.length > 0 && (
+              <TouchableOpacity
+                onPress={handleDiscardAllDead}
+                className="flex-row items-center gap-1 px-2 py-1 rounded bg-red-50"
+              >
+                <Trash2 color="#dc2626" size={14} />
+                <Text className="text-xs text-red-600 font-poppins-semibold">
+                  Descartar falhas ({deadOps.length})
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
           {ops.length === 0 ? (
             <Text className="text-sm text-gray-500">
               Nenhuma operação pendente.
             </Text>
           ) : (
-            ops.map((op) => <OpRow key={op.id} op={op} />)
+            ops.map((op) => (
+              <OpRow key={op.id} op={op} onDiscard={handleDiscardOp} />
+            ))
           )}
         </View>
       </ScrollView>
@@ -180,7 +239,13 @@ function StatusRow({
   );
 }
 
-function OpRow({ op }: { op: OutboxOp }) {
+function OpRow({
+  op,
+  onDiscard,
+}: {
+  op: OutboxOp;
+  onDiscard: (op: OutboxOp) => void;
+}) {
   const Icon =
     op.status === "done"
       ? CheckCircle2
@@ -210,6 +275,15 @@ function OpRow({ op }: { op: OutboxOp }) {
           <Text className="text-xs text-red-600 mt-1">{op.last_error}</Text>
         )}
       </View>
+      {op.status === "dead" && (
+        <TouchableOpacity
+          onPress={() => onDiscard(op)}
+          className="px-2 py-1 rounded bg-red-50"
+          accessibilityLabel="Descartar operação"
+        >
+          <Trash2 color="#dc2626" size={14} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }

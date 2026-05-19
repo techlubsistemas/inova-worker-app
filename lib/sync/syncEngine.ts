@@ -152,6 +152,11 @@ async function doRun(): Promise<SyncEngineRunResult> {
 
       await syncMetaRepo.set("last_push_at", new Date().toISOString());
       dbEvents.emitDataChanged();
+      // Se alguma op virou `dead`, precisamos refrescar o estado local da WO
+      // pelo servidor (a mutação otimista nunca foi aceita).
+      if (drained.deadDetected) {
+        dbEvents.emitPullRequested();
+      }
 
       // Se NADA aplicou (lote tóxico ou tudo overwritten/rejected), sair para evitar loop.
       if (drained.applied === 0) break;
@@ -204,17 +209,23 @@ interface DrainStats {
   applied: number;
   rejected: number;
   overwritten: number;
+  deadDetected: boolean;
 }
 
 async function applyBatchResults(
   sentOps: OutboxOp[],
   results: BatchOpResult[],
 ): Promise<DrainStats> {
-  const stats: DrainStats = { applied: 0, rejected: 0, overwritten: 0 };
+  const stats: DrainStats = {
+    applied: 0,
+    rejected: 0,
+    overwritten: 0,
+    deadDetected: false,
+  };
   const sentById = new Map(sentOps.map((o) => [o.id, o]));
 
-  // Agrupar overwrites por workOrder para registrar 1 alerta por OS.
-  const overwritesByWo = new Map<string, string[]>();
+  // Agrupar overwrites e rejeições por workOrder para registrar 1 alerta por OS.
+  const overwritesByWo = new Map<string, { opIds: string[]; reason: string }>();
 
   for (const result of results) {
     const op = sentById.get(result.clientOpId);
@@ -230,25 +241,33 @@ async function applyBatchResults(
       await outboxRepo.markOverwritten(op.id, "Servidor atualizou primeiro.");
       const woId = extractWoId(op);
       if (woId) {
-        const arr = overwritesByWo.get(woId) ?? [];
-        arr.push(op.id);
-        overwritesByWo.set(woId, arr);
+        const entry = overwritesByWo.get(woId) ?? {
+          opIds: [],
+          reason: "Servidor atualizou a OS antes da sincronização.",
+        };
+        entry.opIds.push(op.id);
+        overwritesByWo.set(woId, entry);
         if (result.serverRow) {
           await applyServerRowToLocal(op, result.serverRow, true);
         }
       }
       stats.overwritten++;
     } else {
-      await outboxRepo.markFailed(op.id, result.error ?? "Rejeitado pelo servidor.");
+      const reason = result.error ?? "Rejeitado pelo servidor.";
+      const { isDead } = await outboxRepo.markFailed(op.id, reason);
       stats.rejected++;
+      if (isDead) {
+        stats.deadDetected = true;
+        await handleDeadOp(op, reason, overwritesByWo);
+      }
     }
   }
 
-  for (const [workOrderId, opIds] of overwritesByWo.entries()) {
+  for (const [workOrderId, entry] of overwritesByWo.entries()) {
     await serverOverwritesRepo.record({
       workOrderId,
-      discardedOpIds: opIds,
-      reason: "Servidor atualizou a OS antes da sincronização.",
+      discardedOpIds: entry.opIds,
+      reason: entry.reason,
     });
   }
 
@@ -262,6 +281,41 @@ async function applyBatchResults(
   }
 
   return stats;
+}
+
+/**
+ * Quando uma op transita para `dead` (rejeitada ou esgotou retries), o estado
+ * local otimista da WO ficaria divergente do servidor para sempre. Esta função:
+ *  - marca as ops irmãs (mesma WO) como `dead` (também falhariam pelo mesmo motivo);
+ *  - reseta o `_sync_status` da WO para permitir que o próximo pull a sobrescreva;
+ *  - registra um overwrite para acionar o banner amarelo ao usuário.
+ */
+async function handleDeadOp(
+  op: OutboxOp,
+  reason: string,
+  overwritesByWo: Map<string, { opIds: string[]; reason: string }>,
+): Promise<void> {
+  const woId = extractWoId(op);
+  if (!woId) return;
+
+  await outboxRepo.markSiblingsDead(
+    op.entity,
+    op.entity_id,
+    op.id,
+    `Operação descartada após rejeição: ${reason}`,
+  );
+
+  // Permite que o próximo pull traga o estado real do servidor (ou remova
+  // a OS se ela não pertence mais ao worker).
+  await workOrdersRepo.markForServerRefresh(woId);
+
+  const entry = overwritesByWo.get(woId) ?? {
+    opIds: [],
+    reason: `Alteração não aceita pelo servidor: ${reason}`,
+  };
+  if (!entry.opIds.includes(op.id)) entry.opIds.push(op.id);
+  // Mantém a razão da primeira rejeição para esta WO.
+  overwritesByWo.set(woId, entry);
 }
 
 function extractWoId(op: OutboxOp): string | null {

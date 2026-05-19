@@ -1,6 +1,6 @@
 import { useSync } from "@/context/SyncContext";
 import { useRouter } from "expo-router";
-import { CloudUpload, RefreshCw } from "lucide-react-native";
+import { Cloud, CloudUpload, RefreshCw } from "lucide-react-native";
 import { TouchableOpacity, View } from "react-native";
 import { Text } from "../PoppinsText";
 
@@ -10,8 +10,8 @@ interface Props {
 }
 
 /**
- * Badge para o header com contagem do outbox + indicador visual quando o
- * engine está rodando. Toque navega para a tela de diagnóstico.
+ * Badge fixo no header. Mostra contagem do outbox + estado do engine.
+ * Sempre visível para que o usuário tenha acesso direto à tela de sync.
  */
 export function SyncBadge({ color = "#fff" }: Props) {
   const { outboxCount, engineStatus, unacknowledgedOverwrites } = useSync();
@@ -19,18 +19,15 @@ export function SyncBadge({ color = "#fff" }: Props) {
   const isSyncing = engineStatus === "pulling" || engineStatus === "pushing";
   const total = outboxCount + unacknowledgedOverwrites;
 
-  if (total === 0 && !isSyncing) return null;
+  const IconComponent = isSyncing ? RefreshCw : total > 0 ? CloudUpload : Cloud;
 
   return (
     <TouchableOpacity
       onPress={() => router.push("/sync" as never)}
       className="relative w-10 h-10 items-center justify-center"
+      accessibilityLabel="Abrir sincronização"
     >
-      {isSyncing ? (
-        <RefreshCw color={color} size={22} />
-      ) : (
-        <CloudUpload color={color} size={22} />
-      )}
+      <IconComponent color={color} size={22} />
       {total > 0 && (
         <View
           className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full items-center justify-center px-1 ${unacknowledgedOverwrites > 0 ? "bg-red-600" : "bg-amber-500"}`}

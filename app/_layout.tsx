@@ -88,6 +88,10 @@ export default function RootLayout() {
         <ThemeProvider
           value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
         >
+          <View style={{ flex: 1 }}>
+            <OfflineBanner />
+            <ServerOverwriteAlert />
+            <View style={{ flex: 1 }}>
           <Stack>
             <Stack.Screen name="index" options={{ headerShown: false }} />
             <Stack.Screen
@@ -137,12 +141,7 @@ export default function RootLayout() {
             />
             <Stack.Screen name="+not-found" />
           </Stack>
-          <View
-            style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 100 }}
-            pointerEvents="box-none"
-          >
-            <OfflineBanner />
-            <ServerOverwriteAlert />
+            </View>
           </View>
           <LockOverlay />
           <StatusBar style="auto" hidden />

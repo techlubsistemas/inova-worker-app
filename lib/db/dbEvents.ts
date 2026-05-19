@@ -1,6 +1,7 @@
 type Listener = () => void;
 
-const listeners = new Set<Listener>();
+const dataChangedListeners = new Set<Listener>();
+const pullRequestedListeners = new Set<Listener>();
 
 /**
  * Pub/sub minimalista para notificar o SyncContext (e telas que precisem)
@@ -11,17 +12,36 @@ const listeners = new Set<Listener>();
  */
 export const dbEvents = {
   subscribe(listener: Listener): () => void {
-    listeners.add(listener);
+    dataChangedListeners.add(listener);
     return () => {
-      listeners.delete(listener);
+      dataChangedListeners.delete(listener);
     };
   },
   emitDataChanged(): void {
-    listeners.forEach((l) => {
+    dataChangedListeners.forEach((l) => {
       try {
         l();
       } catch (err) {
         console.error("[dbEvents] listener falhou:", err);
+      }
+    });
+  },
+  /**
+   * Solicita um pull do servidor (ex.: depois de uma rejeição definitiva
+   * que precisa refrescar o estado local da WO).
+   */
+  subscribePullRequested(listener: Listener): () => void {
+    pullRequestedListeners.add(listener);
+    return () => {
+      pullRequestedListeners.delete(listener);
+    };
+  },
+  emitPullRequested(): void {
+    pullRequestedListeners.forEach((l) => {
+      try {
+        l();
+      } catch (err) {
+        console.error("[dbEvents] pull listener falhou:", err);
       }
     });
   },

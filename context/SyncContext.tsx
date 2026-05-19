@@ -154,6 +154,14 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     });
   }, [dbReady, refreshCounters, runPush]);
 
+  // Subscribe a pedidos de pull (ex.: op virou dead → precisa refrescar WO do servidor).
+  useEffect(() => {
+    if (!dbReady) return;
+    return dbEvents.subscribePullRequested(() => {
+      runPull(true);
+    });
+  }, [dbReady, runPull]);
+
   // Reflete status do engine para o context (push/idle/awaiting_auth).
   useEffect(() => {
     return subscribeEngineStatus((s) => {

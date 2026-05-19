@@ -8,11 +8,11 @@
 
 ## ⚠️ Antes de começar — Pré-requisitos
 
-- [ ] **Migration aplicada em produção** (`npx prisma migrate status` mostra "up to date")
-- [ ] **Worker de teste** existe no banco (com CPF + senha conhecidos)
-- [ ] **Pelo menos 2 OS atribuídas** ao worker de teste (idealmente uma OS solta + uma de rota)
-- [ ] **Acesso ao painel admin** (`inova-app`) para simular ações do despachante
-- [ ] **Acesso ao banco** (psql / pgAdmin / DBeaver) para inspeção rápida quando necessário
+- [x] **Migration aplicada em produção** (`npx prisma migrate status` mostra "up to date")
+- [x] **Worker de teste** existe no banco (com CPF + senha conhecidos)
+- [x] **Pelo menos 2 OS atribuídas** ao worker de teste (idealmente uma OS solta + uma de rota)
+- [x] **Acesso ao painel admin** (`inova-app`) para simular ações do despachante
+- [x] **Acesso ao banco** (psql / pgAdmin / DBeaver) para inspeção rápida quando necessário
 
 > ⚠️ **Atenção sobre Expo Go:** o app agora usa 4 módulos nativos (`expo-sqlite`, `@react-native-community/netinfo`, `expo-local-authentication`, `expo-crypto`). Todos são compatíveis com Expo Go SDK 54, mas se algum não funcionar, será necessário um **dev client** (`eas build --profile development`).
 
@@ -20,10 +20,10 @@
 
 ## 1. Smoke test (sanidade básica)
 
-- [ ] App abre sem crash na home
+- [x] App abre sem crash na home
 - [ ] Console do Metro (`expo start`) mostra log do tipo `[db] migrations aplicadas: 0 → 1 (1)` no primeiro boot
-- [ ] Login com CPF/senha funciona
-- [ ] Após login, a Home mostra a lista de OS atribuídas
+- [x] Login com CPF/senha funciona
+- [x] Após login, a Home mostra a lista de OS atribuídas
 
 **Validação no banco:**
 - [ ] Verificar que o arquivo SQLite foi criado no dispositivo (não tem como inspecionar diretamente sem ferramenta extra; basta confirmar que a Home renderiza dados)
@@ -32,11 +32,13 @@
 
 ## 2. Bootstrap — pull inicial
 
-- [ ] Após login online, **abrir a tela `/sync`** (toque no ícone de nuvem no canto superior direito do header — só aparece se há outbox; se não há, navegue digitando manualmente ou aguarde até ter algo no outbox)
-- [ ] Em `/sync`, "Última sincronização" mostra "agora" ou "X min atrás"
-- [ ] "Pendentes no envio" = 0
-- [ ] "OS sobrescritas pelo servidor" = 0
-- [ ] "Estado do motor" = "Ocioso"
+- [?] Após login online, **abrir a tela `/sync`** (toque no ícone de nuvem no canto superior direito do header — só aparece se há outbox; se não há, navegue digitando manualmente ou aguarde até ter algo no outbox)
+- [x] Em `/sync`, "Última sincronização" mostra "agora" ou "X min atrás"
+- [x] "Pendentes no envio" = 0
+- [x] "OS sobrescritas pelo servidor" = 0
+- [x] "Estado do motor" = "Ocioso"
+
+*Anotações:* Ao fazer login, não aparece nenhum ícone para ir para '/sync'; Posso arrastar a tela para baixo para iniciar um processo de atualização e o ícone aparece.
 
 **Comportamento esperado em background:**
 - [ ] Sair do app por mais de 1 min e voltar → pull dispara silenciosamente (verificar logs do Metro)
@@ -46,11 +48,11 @@
 
 ## 3. Offline read-only
 
-- [ ] **Desligar Wi-Fi e dados móveis do celular**
-- [ ] Banner "Sem conexão" (âmbar) aparece no topo
-- [ ] Home continua mostrando a lista de OS (lendo do SQLite)
-- [ ] Tocar em uma OS abre o detalhe normalmente, com todos os serviços do CIP visíveis
-- [ ] Tocar em "Reportar anomalia" em um serviço abre o modal com a lista de motivos pré-baixados
+- [x] **Desligar Wi-Fi e dados móveis do celular**
+- [x] Banner "Sem conexão" (âmbar) aparece no topo
+- [x] Home continua mostrando a lista de OS (lendo do SQLite)
+- [x] Tocar em uma OS abre o detalhe normalmente, com todos os serviços do CIP visíveis
+- [x] Tocar em "Reportar anomalia" em um serviço abre o modal com a lista de motivos pré-baixados
 
 ---
 
@@ -59,31 +61,31 @@
 > Mantenha o celular **offline** durante este bloco.
 
 ### 4.1 Iniciar OS
-- [ ] Abrir uma OS pendente, tocar "Iniciar"
-- [ ] Status muda imediatamente para "Em andamento" (otimismo da UI)
-- [ ] Voltar para Home → o card da OS mostra status atualizado
-- [ ] Badge no header (ícone de nuvem) aparece com "1" (1 op no outbox)
+- [x] Abrir uma OS pendente, tocar "Iniciar"
+- [x] Status muda imediatamente para "Em andamento" (otimismo da UI)
+- [x] Voltar para Home → o card da OS mostra status atualizado
+- [x] Badge no header (ícone de nuvem) aparece com "1" (1 op no outbox)
 
 ### 4.2 Pausar
-- [ ] Tocar "Pausar"
-- [ ] Status vira "Pausada" imediatamente
-- [ ] Badge no header agora mostra "2"
+- [x] Tocar "Pausar"
+- [x] Status vira "Pausada" imediatamente
+- [x] Badge no header agora mostra "2"
 
 ### 4.3 Retomar
-- [ ] Tocar "Retomar"
-- [ ] Status volta para "Em andamento"
-- [ ] Badge mostra "3"
+- [x] Tocar "Retomar"
+- [x] Status volta para "Em andamento"
+- [x] Badge mostra "3"
 
 ### 4.4 Reportar anomalia em um serviço
-- [ ] Entrar num serviço do CIP, tocar "Reportar anomalia"
-- [ ] Selecionar motivo + escrever observação, salvar
-- [ ] Voltar e ver o serviço marcado com badge de problema/cancelamento
-- [ ] Badge no header agora mostra "4"
+- [x] Entrar num serviço do CIP, tocar "Reportar anomalia"
+- [x] Selecionar motivo + escrever observação, salvar
+- [x] Voltar e ver o serviço marcado com badge de problema/cancelamento
+- [x] Badge no header agora mostra "4"
 
 ### 4.5 Concluir OS
-- [ ] Voltar para a OS, tocar "Concluir"
-- [ ] Status vira "Concluída"
-- [ ] Badge mostra "5"
+- [x] Voltar para a OS, tocar "Concluir"
+- [x] Status vira "Concluída"
+- [x] Badge mostra "5"
 
 ### 4.6 Verificação no banco local (opcional, requer ferramenta)
 - [ ] Não há jeito fácil sem dev client — pular ou usar `npx expo run:android` para inspecionar via debugger
@@ -92,11 +94,13 @@
 
 ## 5. Push — sincronização ao reconectar
 
-- [ ] **Religar Wi-Fi/dados móveis**
-- [ ] Banner de "Sem conexão" desaparece em segundos
-- [ ] Badge no header começa girando (spinner) ou troca para o ícone de upload
-- [ ] Em ~10 segundos, badge desaparece (= outbox vazio)
-- [ ] Abrir `/sync` → "Pendentes no envio" = 0, "Último envio" = "agora"
+- [x] **Religar Wi-Fi/dados móveis**
+- [x] Banner de "Sem conexão" desaparece em segundos
+- [x] Badge no header começa girando (spinner) ou troca para o ícone de upload
+- [?] Em ~10 segundos, badge desaparece (= outbox vazio)
+- [?] Abrir `/sync` → "Pendentes no envio" = 0, "Último envio" = "agora"
+
+*Anotações:* Ocorreu alguns erros pois eu consegui iniciar, cancelar e concluir uma workOrder que não está atribuído ao worker que eu fiz login aparentenmente.
 
 **Validação no banco (produção):**
 - [ ] Conectar ao painel admin do `inova-app`

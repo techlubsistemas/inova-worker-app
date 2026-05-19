@@ -136,7 +136,10 @@ async function markOverwritten(id: string, reason?: string): Promise<void> {
 const RETRY_DELAYS_MS = [1_000, 5_000, 30_000, 300_000, 1_800_000];
 const MAX_ATTEMPTS = RETRY_DELAYS_MS.length;
 
-async function markFailed(id: string, error: string): Promise<void> {
+async function markFailed(
+  id: string,
+  error: string
+): Promise<{ isDead: boolean; attempts: number }> {
   const db = await getDatabase();
   const row = await db.getFirstAsync<{ attempts: number }>(
     `SELECT attempts FROM outbox WHERE id = ?`,
@@ -159,6 +162,77 @@ async function markFailed(id: string, error: string): Promise<void> {
       id,
     ]
   );
+  return { isDead, attempts: nextAttempts };
+}
+
+/**
+ * Marca de uma só vez todas as ops (pending/failed/syncing) de uma mesma
+ * entidade como dead. Usado quando uma op é rejeitada por motivo definitivo
+ * (ex.: worker não atribuído) — as ops irmãs falhariam pelo mesmo motivo.
+ */
+async function markSiblingsDead(
+  entity: OutboxEntity,
+  entityId: string,
+  excludeId: string,
+  reason: string
+): Promise<number> {
+  const db = await getDatabase();
+  const now = new Date().toISOString();
+  const result = await db.runAsync(
+    `UPDATE outbox
+     SET status = 'dead', last_error = ?, next_retry_at = NULL, updated_at = ?
+     WHERE entity = ? AND entity_id = ? AND id != ?
+       AND status IN ('pending', 'failed', 'syncing')`,
+    [reason, now, entity, entityId, excludeId]
+  );
+  return result.changes;
+}
+
+async function findDead(): Promise<OutboxOp[]> {
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<OutboxRow>(
+    `SELECT * FROM outbox WHERE status = 'dead' ORDER BY created_at ASC`
+  );
+  return rows.map((r) => parseRow(r));
+}
+
+async function countDead(): Promise<number> {
+  const db = await getDatabase();
+  const row = await db.getFirstAsync<{ c: number }>(
+    `SELECT COUNT(*) as c FROM outbox WHERE status = 'dead'`
+  );
+  return row?.c ?? 0;
+}
+
+async function deleteById(id: string): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(`DELETE FROM outbox WHERE id = ?`, [id]);
+}
+
+async function deleteByStatus(statuses: OutboxStatus[]): Promise<number> {
+  if (statuses.length === 0) return 0;
+  const db = await getDatabase();
+  const placeholders = statuses.map(() => "?").join(", ");
+  const result = await db.runAsync(
+    `DELETE FROM outbox WHERE status IN (${placeholders})`,
+    statuses
+  );
+  return result.changes;
+}
+
+async function hasOtherPendingForEntity(
+  entity: OutboxEntity,
+  entityId: string,
+  excludeId: string
+): Promise<boolean> {
+  const db = await getDatabase();
+  const row = await db.getFirstAsync<{ c: number }>(
+    `SELECT COUNT(*) as c FROM outbox
+     WHERE entity = ? AND entity_id = ? AND id != ?
+       AND status IN ('pending', 'failed', 'syncing')`,
+    [entity, entityId, excludeId]
+  );
+  return (row?.c ?? 0) > 0;
 }
 
 /** Reseta ops 'syncing' órfãs (ex.: app fechou no meio do batch) de volta para 'pending'. */
@@ -217,9 +291,15 @@ export const outboxRepo = {
   markDone,
   markOverwritten,
   markFailed,
+  markSiblingsDead,
+  findDead,
+  countDead,
   resetOrphanedSyncing,
   countByStatus,
   findAll,
   findByEntityId,
+  hasOtherPendingForEntity,
+  deleteById,
+  deleteByStatus,
   deleteAll,
 };

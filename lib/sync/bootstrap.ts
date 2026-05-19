@@ -104,8 +104,11 @@ async function applySnapshot(
   );
 
   // Work orders precisam tratamento especial p/ preservar ops locais pendentes.
-  const woCount = await applyWorkOrders(snapshot.workOrders);
-  counts.push({ entity: "workOrders", count: woCount });
+  const woResult = await applyWorkOrders(snapshot.workOrders);
+  counts.push({ entity: "workOrders", count: woResult.applied });
+  if (woResult.deletedOrphans > 0) {
+    counts.push({ entity: "workOrdersOrphans", count: woResult.deletedOrphans });
+  }
 
   return counts;
 }
@@ -133,10 +136,11 @@ async function applyEntityList(
 
 async function applyWorkOrders(
   rows: BootstrapEntity[] | undefined
-): Promise<number> {
-  if (!rows || rows.length === 0) return 0;
+): Promise<{ applied: number; deletedOrphans: number }> {
+  const serverIds = new Set((rows ?? []).map((r) => r.id));
   let applied = 0;
-  for (const row of rows) {
+
+  for (const row of rows ?? []) {
     const existing = await workOrdersRepo.findById(row.id);
     if (existing && existing._sync_status === "pending") {
       // Server-wins é tratado pelo sync engine na hora do push.
@@ -151,5 +155,13 @@ async function applyWorkOrders(
     });
     applied++;
   }
-  return applied;
+
+  // Limpa OS órfãs: presentes localmente como 'synced' mas ausentes no snapshot
+  // do servidor (worker foi desatribuído, OS foi removida do escopo, etc.).
+  // OS 'pending' são preservadas — o sync engine resolverá o conflito no push.
+  const localSyncedIds = await workOrdersRepo.findIdsBySyncStatus("synced");
+  const orphanIds = localSyncedIds.filter((id) => !serverIds.has(id));
+  const deletedOrphans = await workOrdersRepo.deleteByIds(orphanIds);
+
+  return { applied, deletedOrphans };
 }
