@@ -1,5 +1,11 @@
+import { LockScreen } from "@/components/sync/LockScreen";
+import { OfflineBanner } from "@/components/sync/OfflineBanner";
+import { ServerOverwriteAlert } from "@/components/sync/ServerOverwriteAlert";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { LocalAuthProvider, useLocalAuth } from "@/context/LocalAuthContext";
+import { NetworkProvider } from "@/context/NetworkContext";
 import { StartedOrdersProvider } from "@/context/StartedOrdersContext";
+import { SyncProvider } from "@/context/SyncContext";
 import { WorkOrdersProvider } from "@/context/WorkOrdersContext";
 import { ContextProvider } from "@/context/contextProvider";
 import { useColorScheme } from "@/hooks/useColorScheme";
@@ -19,9 +25,19 @@ import * as NavigationBar from "expo-navigation-bar";
 import { Stack, usePathname, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { Platform } from "react-native";
+import { Platform, View } from "react-native";
 import "react-native-reanimated";
 import "../global.css";
+
+function LockOverlay() {
+  const { worker } = useAuth();
+  const { state } = useLocalAuth();
+  if (!worker) return null;
+  if (state === "locked_pin" || state === "locked_biometric") {
+    return <LockScreen />;
+  }
+  return null;
+}
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -62,8 +78,11 @@ export default function RootLayout() {
 
   return (
     <ContextProvider>
+      <NetworkProvider>
       <AuthProvider>
         <AuthGuard>
+        <SyncProvider>
+        <LocalAuthProvider>
         <WorkOrdersProvider>
         <StartedOrdersProvider>
         <ThemeProvider
@@ -111,14 +130,30 @@ export default function RootLayout() {
               name="loading"
               options={{ headerShown: false, animation: "fade" }}
             />
+            <Stack.Screen name="sync" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="profile/security"
+              options={{ headerShown: false }}
+            />
             <Stack.Screen name="+not-found" />
           </Stack>
+          <View
+            style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 100 }}
+            pointerEvents="box-none"
+          >
+            <OfflineBanner />
+            <ServerOverwriteAlert />
+          </View>
+          <LockOverlay />
           <StatusBar style="auto" hidden />
         </ThemeProvider>
         </StartedOrdersProvider>
         </WorkOrdersProvider>
+        </LocalAuthProvider>
+        </SyncProvider>
         </AuthGuard>
       </AuthProvider>
+      </NetworkProvider>
     </ContextProvider>
   );
 }

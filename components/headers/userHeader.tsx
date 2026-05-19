@@ -3,6 +3,7 @@ import { LogOut } from "lucide-react-native";
 import { Alert, Image, TouchableOpacity, View } from "react-native";
 import { LinearGradient } from "../linearGradient";
 import { Text } from "../PoppinsText";
+import { SyncBadge } from "../sync/SyncBadge";
 
 export function UserHeader() {
   const { signOut, worker } = useAuth();
@@ -16,22 +17,25 @@ export function UserHeader() {
             resizeMode="contain"
             className="w-1/3 "
           />
-          <TouchableOpacity
-            onPress={() => {
-              Alert.alert("Sair", "Deseja realmente sair?", [
-                {
-                  text: "Cancelar",
-                  style: "cancel",
-                },
-                {
-                  text: "Sair",
-                  onPress: () => signOut(),
-                },
-              ]);
-            }}
-          >
-            <LogOut color={"#fff"} />
-          </TouchableOpacity>
+          <View className="flex flex-row items-center gap-2">
+            <SyncBadge color="#fff" />
+            <TouchableOpacity
+              onPress={() => {
+                Alert.alert("Sair", "Deseja realmente sair?", [
+                  {
+                    text: "Cancelar",
+                    style: "cancel",
+                  },
+                  {
+                    text: "Sair",
+                    onPress: () => signOut(),
+                  },
+                ]);
+              }}
+            >
+              <LogOut color={"#fff"} />
+            </TouchableOpacity>
+          </View>
         </View>
         <View className="flex flex-col ">
           <Text className="text-white font-poppins-bold text-2xl">

@@ -1,25 +1,27 @@
-import { fetchMyWorkOrders } from "@/services/workOrder";
+import { workOrdersRepo } from "@/lib/db/repositories/workOrdersRepo";
 import type { WorkOrderApi } from "@/types/workOrder";
 import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
-
-const CACHE_TTL = 30_000; // 30 seconds
+import { useSync } from "./SyncContext";
 
 interface WorkOrdersContextValue {
   workOrders: WorkOrderApi[];
   loading: boolean;
   error: string | null;
-  /** Force-refetch from API regardless of cache. */
+  /** Force a full sync (pull + push) and re-read locally. */
   refetch: () => Promise<void>;
-  /** Refetch only if cache is stale (older than CACHE_TTL). */
+  /** Re-read from local DB without forcing a sync (auto-pull respects throttle). */
   refetchIfStale: () => Promise<void>;
-  /** Optimistically update a single work order in local state. */
+  /**
+   * Optimistic in-memory update — used pelas telas atuais antes do refactor
+   * para outbox. Será substituído na Fase 3 por mutações via SQLite + outbox.
+   */
   updateLocal: (
     orderId: string,
     updater: (wo: WorkOrderApi) => WorkOrderApi,
@@ -33,47 +35,40 @@ export function WorkOrdersProvider({
 }: {
   children: React.ReactNode;
 }) {
+  const { dbReady, dataVersion, engineStatus, forceSync } = useSync();
   const [workOrders, setWorkOrders] = useState<WorkOrderApi[]>([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const lastFetchedAt = useRef(0);
-  const fetchingRef = useRef<Promise<void> | null>(null);
+
+  const reload = useCallback(async () => {
+    if (!dbReady) return;
+    try {
+      const rows = await workOrdersRepo.findAll();
+      setWorkOrders(rows.map((r) => r.data as unknown as WorkOrderApi));
+      setError(null);
+    } catch (err) {
+      const message =
+        err && typeof err === "object" && "message" in err
+          ? String((err as Error).message)
+          : "Falha ao carregar ordens de serviço.";
+      setError(message);
+    }
+  }, [dbReady]);
+
+  // Re-read sempre que o DB ficar pronto ou um pull aplicar mudanças.
+  useEffect(() => {
+    reload();
+  }, [reload, dataVersion]);
 
   const refetch = useCallback(async () => {
-    // Deduplicate concurrent calls — if a fetch is already in-flight, reuse it
-    if (fetchingRef.current) {
-      await fetchingRef.current;
-      return;
-    }
-
-    const promise = (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetchMyWorkOrders();
-        setWorkOrders(res.workOrders ?? []);
-        lastFetchedAt.current = Date.now();
-      } catch (err: unknown) {
-        const message =
-          err && typeof err === "object" && "message" in err
-            ? String((err as Error).message)
-            : "Falha ao carregar ordens de serviço.";
-        setError(message);
-      } finally {
-        setLoading(false);
-        fetchingRef.current = null;
-      }
-    })();
-
-    fetchingRef.current = promise;
-    await promise;
-  }, []);
+    await forceSync();
+    await reload();
+  }, [forceSync, reload]);
 
   const refetchIfStale = useCallback(async () => {
-    if (Date.now() - lastFetchedAt.current > CACHE_TTL) {
-      await refetch();
-    }
-  }, [refetch]);
+    // O SyncContext já dispara auto-pull no foreground/intervalo.
+    // Aqui apenas re-lemos do SQLite — o pull (se for rodar) atualizará via dataVersion.
+    await reload();
+  }, [reload]);
 
   const updateLocal = useCallback(
     (orderId: string, updater: (wo: WorkOrderApi) => WorkOrderApi) => {
@@ -87,13 +82,13 @@ export function WorkOrdersProvider({
   const value = useMemo<WorkOrdersContextValue>(
     () => ({
       workOrders,
-      loading,
+      loading: !dbReady || engineStatus === "pulling",
       error,
       refetch,
       refetchIfStale,
       updateLocal,
     }),
-    [workOrders, loading, error, refetch, refetchIfStale, updateLocal],
+    [workOrders, dbReady, engineStatus, error, refetch, refetchIfStale, updateLocal],
   );
 
   return (
