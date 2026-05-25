@@ -100,16 +100,6 @@ export default function RootLayout() {
             />
 
             <Stack.Screen name="home" options={{ headerShown: false }} />
-            <Stack.Screen name="routes" options={{ headerShown: false }} />
-
-            <Stack.Screen
-              name="routeEquipment"
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="startedRoute"
-              options={{ headerShown: false }}
-            />
             <Stack.Screen
               name="route/[routeId]"
               options={{ headerShown: false }}
