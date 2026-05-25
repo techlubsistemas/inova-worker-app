@@ -3,6 +3,19 @@ import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 
+// Throw em vez de fallback pra localhost — build de produção sem env var devia falhar imediatamente
+// em vez de tentar conectar ao localhost do dispositivo do usuário.
+if (!process.env.EXPO_PUBLIC_API_URL) {
+  if (__DEV__) {
+    console.warn(
+      "[AuthContext] EXPO_PUBLIC_API_URL ausente — usando fallback http://localhost:3333 (apenas DEV)"
+    );
+  } else {
+    throw new Error(
+      "EXPO_PUBLIC_API_URL ausente. Configure no eas.json ou .env antes do build de produção."
+    );
+  }
+}
 export const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3333";
 
 export interface Worker {
@@ -70,17 +83,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function signIn(cpf: string, password: string) {
     try {
-      console.log("--- SIGN IN START ---");
-      console.log("Sending request to:", `${API_URL}/auth/worker/login`);
-      console.log("Payload:", { cpf, password });
-
+      // NUNCA logar password / credenciais no console (vaza em logs do device)
       const response = await axios.post(`${API_URL}/auth/worker/login`, {
         cpf,
         password,
       });
-
-      console.log("Response Status:", response.status);
-      console.log("Response Data:", response.data);
 
       const { access_token, worker } = response.data;
 
@@ -94,17 +101,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setWorker(worker);
       router.replace("/home");
     } catch (error: any) {
-      console.error("--- SIGN IN ERROR ---");
-      console.error("Error Object:", error);
       if (error.response) {
-        console.error("Error Response Status:", error.response.status);
-        console.error("Error Response Data:", error.response.data);
         throw new Error(error.response.data.message || "Erro ao fazer login");
       } else if (error.request) {
-        console.error("Error Request:", error.request);
         throw new Error("Sem resposta do servidor. Verifique sua conexão.");
       } else {
-        console.error("Error Message:", error.message);
         throw new Error(error.message);
       }
     }
@@ -117,32 +118,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     confirmNewPassword: string,
   ) {
     try {
-      console.log("--- FIRST ACCESS START ---");
-      console.log("Sending request to:", `${API_URL}/auth/worker/first-access`);
-
-      const response = await axios.post(`${API_URL}/auth/worker/first-access`, {
+      // Não loga payload — contém senhas
+      await axios.post(`${API_URL}/auth/worker/first-access`, {
         cpf,
         tempPassword,
         newPassword,
         confirmNewPassword,
       });
-
-      console.log("Response Status:", response.status);
-      console.log("Response Data:", response.data);
     } catch (error: any) {
-      console.error("--- FIRST ACCESS ERROR ---");
-      console.error("Error Object:", error);
       if (error.response) {
-        console.error("Error Response Status:", error.response.status);
-        console.error("Error Response Data:", error.response.data);
         throw new Error(
           error.response.data.message || "Erro ao cadastrar senha",
         );
       } else if (error.request) {
-        console.error("Error Request:", error.request);
         throw new Error("Sem resposta do servidor. Verifique sua conexão.");
       } else {
-        console.error("Error Message:", error.message);
         throw new Error(error.message);
       }
     }
