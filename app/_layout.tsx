@@ -129,6 +129,15 @@ export default function RootLayout() {
               name="profile/security"
               options={{ headerShown: false }}
             />
+            <Stack.Screen name="trainings" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="trainings/[trainingId]"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="oil-collect/[equipmentId]"
+              options={{ headerShown: false }}
+            />
             <Stack.Screen name="+not-found" />
           </Stack>
             </View>

@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   BookOpen,
+  Droplets,
   FileText,
   Video,
 } from "lucide-react-native";
@@ -144,6 +145,7 @@ export default function WorkOrderServiceDetailScreen() {
     service.cip?.subset?.set?.equipment?.tag ??
     "—";
   const local = getLocal(service);
+  const equipmentId = service.cip?.subset?.set?.equipment?.id;
   const cancellationText = isCancelled
     ? service.cancellationReasonName || service.cancellationReason || null
     : null;
@@ -213,6 +215,23 @@ export default function WorkOrderServiceDetailScreen() {
           <ToolsAndMaterialsSection servicesList={[service]} />
 
           <WorkInstructionsSection service={service} />
+
+          {equipmentId ? (
+            <TouchableOpacity
+              onPress={() =>
+                router.push({
+                  pathname: "/oil-collect/[equipmentId]",
+                  params: { equipmentId, equipmentTag: equipmentName },
+                })
+              }
+              className="rounded-xl border border-secondary-500 bg-secondary-50 p-4 flex-row items-center gap-3"
+            >
+              <Droplets color="#182D53" size={20} />
+              <Text className="flex-1 font-poppins-medium text-primary-500">
+                Coletar amostra de óleo
+              </Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
       </ScrollView>
 
