@@ -1,6 +1,7 @@
 import { Text } from "@/components/PoppinsText";
 import { ServiceStatusBadge } from "@/components/ServiceStatusBadge";
 import { ToolsAndMaterialsSection } from "@/components/ToolsAndMaterialsSection";
+import { useAuth } from "@/context/AuthContext";
 import { useWorkOrders } from "@/context/WorkOrdersContext";
 import { resolveWorkInstructionAttachmentUrl } from "@/lib/resolveAttachmentUrl";
 import type {
@@ -58,6 +59,7 @@ export default function WorkOrderServiceDetailScreen() {
     cipServiceId: string;
   }>();
   const router = useRouter();
+  const { hasModule } = useAuth();
   const { workOrders, loading, error, refetch, refetchIfStale } = useWorkOrders();
 
   useFocusEffect(
@@ -216,7 +218,7 @@ export default function WorkOrderServiceDetailScreen() {
 
           <WorkInstructionsSection service={service} />
 
-          {equipmentId ? (
+          {equipmentId && hasModule("ANALISE_OLEO") ? (
             <TouchableOpacity
               onPress={() =>
                 router.push({

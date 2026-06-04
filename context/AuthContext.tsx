@@ -18,17 +18,30 @@ if (!process.env.EXPO_PUBLIC_API_URL) {
 }
 export const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3333";
 
+export type CompanyModule =
+  | "CADASTROS"
+  | "PLANEJAMENTO"
+  | "ORDENS_SERVICO"
+  | "ANOMALIAS"
+  | "DASHBOARD"
+  | "TREINAMENTOS"
+  | "ANALISE_OLEO";
+
 export interface Worker {
   id: string;
   name: string;
   cpf: string;
   company: string;
   companyId?: string;
+  /** Módulos contratados pela empresa. Ausente em sessões antigas (trata-se como "tudo liberado"). */
+  modules?: CompanyModule[];
 }
 
 interface AuthContextData {
   worker: Worker | null;
   isLoading: boolean;
+  /** true se a empresa contratou o módulo. Sessão sem `modules` (legado) libera tudo; backend ainda trava. */
+  hasModule: (m: CompanyModule) => boolean;
   signIn: (cpf: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   firstAccess: (
@@ -145,9 +158,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.replace("/");
   }
 
+  function hasModule(m: CompanyModule) {
+    // Sessão legada sem `modules`: libera (backend ainda é a trava). Caso contrário, checa a lista.
+    if (!worker?.modules) return true;
+    return worker.modules.includes(m);
+  }
+
   return (
     <AuthContext.Provider
-      value={{ worker, isLoading, signIn, signOut, firstAccess }}
+      value={{ worker, isLoading, hasModule, signIn, signOut, firstAccess }}
     >
       {children}
     </AuthContext.Provider>
