@@ -1,5 +1,5 @@
 {
-  "name": "inova-app-04",
+  "name": "inova-worker-app",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {

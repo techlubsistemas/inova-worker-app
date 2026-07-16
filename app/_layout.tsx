@@ -23,9 +23,9 @@ import {
 } from "@react-navigation/native";
 import * as NavigationBar from "expo-navigation-bar";
 import { Stack, usePathname, useRouter } from "expo-router";
-import { StatusBar } from "expo-status-bar";
+import { StatusBar, setStatusBarHidden } from "expo-status-bar";
 import { useEffect } from "react";
-import { Platform, View } from "react-native";
+import { AppState, Platform, View } from "react-native";
 import "react-native-reanimated";
 import "../global.css";
 
@@ -57,6 +57,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const pathname = usePathname();
   const [loaded] = useFonts({
     Poppins_400Regular,
     Poppins_500Medium,
@@ -66,10 +67,21 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (Platform.OS === "android") {
-      NavigationBar.setVisibilityAsync("hidden");
-    }
-  }, []);
+    const hideSystemBars = () => {
+      setStatusBarHidden(true, "none");
+      if (Platform.OS === "android") {
+        void NavigationBar.setVisibilityAsync("hidden").catch(() => {
+          // Alguns ambientes (web/preview) não expõem a barra nativa.
+        });
+      }
+    };
+
+    hideSystemBars();
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") hideSystemBars();
+    });
+    return () => subscription.remove();
+  }, [pathname]);
 
   if (!loaded) {
     // Async font loading only occurs in development.
